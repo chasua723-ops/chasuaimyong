@@ -1,0 +1,40 @@
+{
+  "name": "imyong-app-implementation",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "ingest:book": "tsx scripts/ingest-book-cli.ts",
+    "ingest:reference": "tsx scripts/ingest-reference-cli.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
+    "@supabase/supabase-js": "^2.111.0",
+    "dotenv": "^17.4.2",
+    "next": "16.2.12",
+    "pdf-parse": "^2.4.5",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.5",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.12",
+    "jsdom": "^30.0.1",
+    "pdf-lib": "^1.17.1",
+    "tsx": "^4.23.5",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}
