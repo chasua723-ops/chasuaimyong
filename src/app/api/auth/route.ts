@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPin } from '@/lib/auth/pin';
+import { signAuthToken } from '@/lib/auth/token';
 
 export async function POST(req: NextRequest) {
   const { pin } = (await req.json()) as { pin?: string };
@@ -13,8 +14,9 @@ export async function POST(req: NextRequest) {
   }
 
   const res = NextResponse.json({ ok: true });
-  res.cookies.set('imyong_auth', 'ok', {
+  res.cookies.set('imyong_auth', await signAuthToken(expected), {
     httpOnly: true,
+    secure: true,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 30,
   });

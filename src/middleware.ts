@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyAuthToken } from '@/lib/auth/token';
 
-export function middleware(req: NextRequest) {
-  const isAuthed = req.cookies.get('imyong_auth')?.value === 'ok';
+export async function middleware(req: NextRequest) {
   const isPublic =
     req.nextUrl.pathname.startsWith('/login') ||
     req.nextUrl.pathname.startsWith('/api/auth');
 
-  if (!isAuthed && !isPublic) {
+  if (isPublic) return NextResponse.next();
+
+  // Read at request time: APP_PIN is a server-side runtime env var.
+  const pin = process.env.APP_PIN;
+  const cookieValue = req.cookies.get('imyong_auth')?.value ?? '';
+  const isAuthed = !!pin && (await verifyAuthToken(cookieValue, pin));
+
+  if (!isAuthed) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
   return NextResponse.next();
