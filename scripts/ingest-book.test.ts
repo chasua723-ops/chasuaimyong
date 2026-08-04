@@ -41,6 +41,14 @@ describe('ingestBook', () => {
     );
 
     expect(result).toEqual(insertedBook);
+    expect(supabase.booksInsert).toHaveBeenCalledWith({
+      name: '문법',
+      total_pages: 2,
+      exam_date: '2027-01-01',
+      target_read_count: 3,
+      current_read_count: 1,
+      current_page: 1,
+    });
     expect(supabase.pagesInsert).toHaveBeenCalledWith([
       { book_id: 'book-1', page_num: 1, content: 'first page' },
       { book_id: 'book-1', page_num: 2, content: 'second page' },
