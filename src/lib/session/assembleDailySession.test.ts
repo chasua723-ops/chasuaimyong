@@ -85,6 +85,25 @@ describe('assembleDailySession', () => {
     expect(supabase.inserted.vocab_of_the_day).toBeUndefined();
   });
 
+  it('clamps an out-of-range sourcePage from Claude into the day\'s assigned page range', async () => {
+    const supabase = createMockSupabase(baseTables);
+    // The mock book's pacing yields pages 1~3 for 2026-08-03.
+    vi.mocked(generateQuestions)
+      .mockResolvedValueOnce([
+        { type: 'grammar', sourcePage: 999, prompt: 'q', correctAnswer: 'a' },
+      ])
+      .mockResolvedValueOnce([
+        { type: 'essay', sourcePage: 0, prompt: '서술형 문제', correctAnswer: '모범답안' },
+      ]);
+
+    await assembleDailySession(supabase as any, {} as any, '2026-08-03');
+
+    const quiz = supabase.inserted.questions.find((q: any) => q.type === 'grammar');
+    const essay = supabase.inserted.questions.find((q: any) => q.type === 'essay');
+    expect(quiz.source_page).toBe(3);
+    expect(essay.source_page).toBe(1);
+  });
+
   it('inserts no daily_sessions row when question generation fails, so the day can be retried', async () => {
     const supabase = createMockSupabase(baseTables);
     vi.mocked(generateQuestions).mockRejectedValueOnce(new Error('Claude blew up'));

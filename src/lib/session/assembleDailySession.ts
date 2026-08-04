@@ -78,11 +78,18 @@ export async function assembleDailySession(
       referenceExcerpts,
     });
 
+    // Claude sometimes returns a sourcePage outside the excerpt it was given.
+    // Persisting that would break the later book_pages lookup in
+    // recordAttempt/recordEssayAttempt, silently degrading the RAG grounding to
+    // an empty page while the UI still claims "(N페이지 참고)".
+    const clampPage = (page: number) =>
+      Math.min(Math.max(Number(page) || range.startPage, range.startPage), range.endPage);
+
     for (const q of generated) {
       pendingQuestions.push({
         book_id: book.id,
         type: q.type,
-        source_page: q.sourcePage,
+        source_page: clampPage(q.sourcePage),
         prompt: q.prompt,
         choices: q.choices ?? null,
         correct_answer: q.correctAnswer,
@@ -100,7 +107,7 @@ export async function assembleDailySession(
         pendingQuestions.push({
           book_id: book.id,
           type: 'essay' as const,
-          source_page: q.sourcePage,
+          source_page: clampPage(q.sourcePage),
           prompt: q.prompt,
           choices: null,
           correct_answer: q.correctAnswer,
