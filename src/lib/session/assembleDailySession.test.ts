@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { assembleDailySession } from './assembleDailySession';
 import { createMockSupabase } from '../../../tests/helpers/mockSupabase';
+import { generateQuestions } from '../ai/generateQuestions';
+import { curateVocab } from '../ai/curateVocab';
 
 vi.mock('../ai/generateQuestions', () => ({
   generateQuestions: vi.fn(async (_client: any, input: any) => {
@@ -40,6 +42,28 @@ const baseTables = {
 };
 
 describe('assembleDailySession', () => {
+  beforeEach(() => {
+    vi.mocked(generateQuestions).mockClear();
+    vi.mocked(curateVocab).mockClear();
+  });
+
+  it('returns the existing session and performs no side effects when one already exists for today', async () => {
+    const existingSession = { id: 's1', date: '2026-08-03', essay_book_id: 'b1', completed: false };
+    const supabase = createMockSupabase({
+      ...baseTables,
+      daily_sessions: [existingSession],
+    });
+
+    const session = await assembleDailySession(supabase as any, {} as any, '2026-08-03');
+
+    expect(session).toEqual(existingSession);
+    expect(supabase.inserted.questions).toBeUndefined();
+    expect(supabase.inserted.vocab_of_the_day).toBeUndefined();
+    expect(supabase.inserted.daily_sessions).toBeUndefined();
+    expect(generateQuestions).not.toHaveBeenCalled();
+    expect(curateVocab).not.toHaveBeenCalled();
+  });
+
   it('creates a session, generates questions per book, and curates vocab when missing', async () => {
     const supabase = createMockSupabase(baseTables);
 
