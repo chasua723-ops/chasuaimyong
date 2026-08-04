@@ -19,6 +19,20 @@ describe('askClaude', () => {
     );
   });
 
+  it('disables thinking so it cannot consume the max_tokens budget', async () => {
+    const fakeClient = {
+      messages: {
+        create: vi.fn().mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] }),
+      },
+    } as any;
+
+    await askClaude(fakeClient, 'hi', { maxTokens: 300 });
+
+    expect(fakeClient.messages.create).toHaveBeenCalledWith(
+      expect.objectContaining({ thinking: { type: 'disabled' }, max_tokens: 300 })
+    );
+  });
+
   it('throws when the response contains no text block', async () => {
     const fakeClient = {
       messages: { create: vi.fn().mockResolvedValue({ content: [] }) },

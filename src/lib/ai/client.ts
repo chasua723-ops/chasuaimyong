@@ -25,6 +25,10 @@ export async function askClaude(
     model: 'claude-sonnet-5',
     max_tokens: options.maxTokens ?? 1024,
     system: options.system,
+    // Adaptive thinking is on by default for this model and shares the
+    // max_tokens budget with the text response; our budgets are as tight as
+    // 300 tokens, so thinking could leave no text block at all.
+    thinking: { type: 'disabled' },
     messages: [{ role: 'user', content: prompt }],
   } as any);
 
