@@ -1,5 +1,7 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+
+config({ path: '.env.local' });
 import { ingestBook } from './ingest-book';
 
 const [, , filePath, bookName, examDate, targetReadCountStr] = process.argv;
