@@ -3,10 +3,20 @@ import { createClient } from '@supabase/supabase-js';
 import { getAnthropicClient } from '@/lib/ai/client';
 import { assembleDailySession } from '@/lib/session/assembleDailySession';
 import { calculateDailyRange } from '@/lib/pacing';
+import { getTodayInSeoul } from '@/lib/date';
 
 export async function GET() {
+  try {
+    return await handleGet();
+  } catch (err) {
+    console.error('[GET /api/session/today] failed:', err);
+    return NextResponse.json({ error: "Failed to load today's session" }, { status: 500 });
+  }
+}
+
+async function handleGet() {
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayInSeoul();
 
   const session = await assembleDailySession(supabase, getAnthropicClient(), today);
 

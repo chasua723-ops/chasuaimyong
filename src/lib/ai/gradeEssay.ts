@@ -1,5 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk';
-import { askClaude } from './client';
+import { askClaude, parseJsonResponse } from './client';
 
 export interface EssayGradeInput {
   bookName: string;
@@ -33,5 +33,5 @@ export async function gradeEssay(client: Anthropic, input: EssayGradeInput): Pro
     maxTokens: 1024,
   });
 
-  return JSON.parse(raw) as EssayGradeResult;
+  return parseJsonResponse<EssayGradeResult>(raw);
 }

@@ -1,5 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk';
-import { askClaude } from './client';
+import { askClaude, parseJsonResponse } from './client';
 import type { QuestionType } from '@/types/db';
 
 export interface QuestionGenInput {
@@ -39,5 +39,5 @@ export async function generateQuestions(
     maxTokens: 2048,
   });
 
-  return JSON.parse(raw) as GeneratedQuestion[];
+  return parseJsonResponse<GeneratedQuestion[]>(raw);
 }

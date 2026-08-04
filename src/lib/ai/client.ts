@@ -34,3 +34,27 @@ export async function askClaude(
   }
   return textBlock.text;
 }
+
+/**
+ * Parses JSON out of a raw Claude text response.
+ *
+ * Claude frequently wraps JSON in a markdown code fence even when asked not to,
+ * so a bare JSON.parse is not safe. Tries the raw string first, then retries
+ * after stripping a surrounding ``` / ```json fence.
+ */
+export function parseJsonResponse<T>(raw: string): T {
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const stripped = raw
+      .trim()
+      .replace(/^```[a-zA-Z]*\s*/, '')
+      .replace(/```\s*$/, '')
+      .trim();
+    try {
+      return JSON.parse(stripped) as T;
+    } catch {
+      throw new Error(`Failed to parse JSON from Claude response: ${raw.slice(0, 200)}`);
+    }
+  }
+}

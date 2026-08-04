@@ -1,5 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk';
-import { askClaude } from './client';
+import { askClaude, parseJsonResponse } from './client';
 
 export interface VocabItem {
   wordZh: string;
@@ -21,5 +21,5 @@ export async function curateVocab(client: Anthropic, excludeWords: string[]): Pr
     maxTokens: 512,
   });
 
-  return JSON.parse(raw) as VocabItem;
+  return parseJsonResponse<VocabItem>(raw);
 }

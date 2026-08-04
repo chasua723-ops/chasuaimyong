@@ -40,15 +40,28 @@ interface EssayFeedback {
 
 export default function Page() {
   const [data, setData] = useState<SessionData | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [quizFeedback, setQuizFeedback] = useState<Record<string, QuizFeedback>>({});
   const [essayFeedback, setEssayFeedback] = useState<Record<string, EssayFeedback>>({});
   const [koreanDrafts, setKoreanDrafts] = useState<Record<string, string>>({});
   const [chineseAnswers, setChineseAnswers] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch('/api/session/today')
-      .then((res) => res.json())
-      .then(setData);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/session/today');
+        if (!res.ok) throw new Error(`session request failed: ${res.status}`);
+        const json = (await res.json()) as SessionData;
+        if (!cancelled) setData(json);
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) setError('오늘 학습 콘텐츠를 불러오지 못했어요. 새로고침 해주세요.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function submitAnswer(questionId: string, userAnswer: string) {
@@ -80,6 +93,7 @@ export default function Page() {
     setEssayFeedback((prev) => ({ ...prev, [questionId]: result }));
   }
 
+  if (error) return <p>{error}</p>;
   if (!data) return <p>불러오는 중...</p>;
 
   return (
