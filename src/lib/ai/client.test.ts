@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { askClaude, parseJsonResponse } from './client';
+import { askClaude, askClaudeVision, parseJsonResponse } from './client';
 
 describe('askClaude', () => {
   it('returns the text content from the response', async () => {
@@ -39,6 +39,43 @@ describe('askClaude', () => {
     } as any;
 
     await expect(askClaude(fakeClient, 'say hello')).rejects.toThrow('no text block');
+  });
+});
+
+describe('askClaudeVision', () => {
+  it('sends the image and prompt text as separate content blocks', async () => {
+    const fakeClient = {
+      messages: {
+        create: vi.fn().mockResolvedValue({ content: [{ type: 'text', text: '추출된 텍스트' }] }),
+      },
+    } as any;
+
+    const result = await askClaudeVision(fakeClient, 'base64data', 'image/png', '텍스트를 추출해줘');
+
+    expect(result).toBe('추출된 텍스트');
+    expect(fakeClient.messages.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'base64data' } },
+              { type: 'text', text: '텍스트를 추출해줘' },
+            ],
+          },
+        ],
+      })
+    );
+  });
+
+  it('throws when the response contains no text block', async () => {
+    const fakeClient = {
+      messages: { create: vi.fn().mockResolvedValue({ content: [] }) },
+    } as any;
+
+    await expect(askClaudeVision(fakeClient, 'base64data', 'image/png', 'prompt')).rejects.toThrow(
+      'no text block'
+    );
   });
 });
 

@@ -40,6 +40,41 @@ export async function askClaude(
 }
 
 /**
+ * Same as askClaude, but sends a single base64-encoded image alongside the
+ * text prompt. Used for vision-based OCR when a PDF's embedded text layer
+ * is corrupted (broken ToUnicode CMap) and unusable for RAG grounding.
+ */
+export async function askClaudeVision(
+  client: Anthropic,
+  imageBase64: string,
+  mediaType: 'image/png' | 'image/jpeg',
+  prompt: string,
+  options: AskClaudeOptions = {}
+): Promise<string> {
+  const response = await client.messages.create({
+    model: 'claude-sonnet-5',
+    max_tokens: options.maxTokens ?? 1024,
+    system: options.system,
+    thinking: { type: 'disabled' },
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageBase64 } },
+          { type: 'text', text: prompt },
+        ],
+      },
+    ],
+  } as any);
+
+  const textBlock = (response as any).content.find((block: any) => block.type === 'text');
+  if (!textBlock) {
+    throw new Error('Claude response contained no text block');
+  }
+  return textBlock.text;
+}
+
+/**
  * Parses JSON out of a raw Claude text response.
  *
  * Claude frequently wraps JSON in a markdown code fence even when asked not to,
