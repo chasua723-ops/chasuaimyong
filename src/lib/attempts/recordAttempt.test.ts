@@ -59,6 +59,33 @@ describe('recordAttempt', () => {
     });
   });
 
+  it('throws a diagnosable error when the attempts insert fails', async () => {
+    const question = baseTables().questions[0];
+    const supabase = {
+      from: (table: string) => {
+        if (table === 'attempts') {
+          return {
+            insert: async () => ({ data: null, error: { message: 'duplicate key value' } }),
+          };
+        }
+        const api: any = {
+          select: () => api,
+          eq: () => api,
+          single: async () => ({ data: question, error: null }),
+          maybeSingle: async () => ({ data: null, error: null }),
+        };
+        return api;
+      },
+    };
+
+    await expect(
+      recordAttempt(supabase as any, {} as any, {
+        questionId: 'q1',
+        userAnswer: '주어+把+목적어+동사',
+      })
+    ).rejects.toThrow('Failed to insert attempt: duplicate key value');
+  });
+
   it('updates an existing category_stats row in place on a wrong answer, without inserting a new one', async () => {
     // Wrong answer chosen so we can assert total_count increments while
     // correct_count is left untouched -- the branch most likely to hide a

@@ -33,7 +33,7 @@ export async function recordEssayAttempt(
     chineseAnswer: input.chineseAnswer,
   });
 
-  await (supabase.from('attempts') as any).insert({
+  const { error: attemptError } = await (supabase.from('attempts') as any).insert({
     question_id: question.id,
     korean_draft: input.koreanDraft,
     chinese_answer: input.chineseAnswer,
@@ -41,6 +41,7 @@ export async function recordEssayAttempt(
     chinese_score: grade.chineseScore,
     ai_feedback: grade.feedback,
   });
+  if (attemptError) throw new Error(`Failed to insert essay attempt: ${attemptError.message}`);
 
   return grade;
 }

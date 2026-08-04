@@ -137,19 +137,25 @@ export async function assembleDailySession(
   }
 
   // Nothing above threw: now it is safe to persist the session and its content.
-  const { data: session } = await (supabase.from('daily_sessions') as any)
+  const { data: session, error: sessionError } = await (supabase.from('daily_sessions') as any)
     .insert({ date: today, essay_book_id: essayBook.id, completed: false })
     .select()
     .single();
+  if (sessionError) throw new Error(`Failed to insert daily session: ${sessionError.message}`);
+  if (!session) throw new Error('Daily session insert returned no row');
 
   if (pendingQuestions.length > 0) {
-    await (supabase.from('questions') as any).insert(
+    const { error: questionsError } = await (supabase.from('questions') as any).insert(
       pendingQuestions.map((q) => ({ ...q, session_id: session.id }))
     );
+    if (questionsError) throw new Error(`Failed to insert questions: ${questionsError.message}`);
   }
 
   if (pendingVocab) {
-    await (supabase.from('vocab_of_the_day') as any).insert(pendingVocab);
+    const { error: vocabError } = await (supabase.from('vocab_of_the_day') as any).insert(
+      pendingVocab
+    );
+    if (vocabError) throw new Error(`Failed to insert vocab of the day: ${vocabError.message}`);
   }
 
   return session;

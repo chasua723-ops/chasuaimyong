@@ -38,12 +38,13 @@ export async function recordAttempt(
     });
   }
 
-  await (supabase.from('attempts') as any).insert({
+  const { error: attemptError } = await (supabase.from('attempts') as any).insert({
     question_id: question.id,
     user_answer: input.userAnswer,
     is_correct: isCorrect,
     explanation,
   });
+  if (attemptError) throw new Error(`Failed to insert attempt: ${attemptError.message}`);
 
   const { data: statRow } = await (supabase.from('category_stats') as any)
     .select('*')
@@ -51,18 +52,24 @@ export async function recordAttempt(
     .maybeSingle();
 
   if (statRow) {
-    await (supabase.from('category_stats') as any)
+    const { error: statUpdateError } = await (supabase.from('category_stats') as any)
       .update({
         correct_count: statRow.correct_count + (isCorrect ? 1 : 0),
         total_count: statRow.total_count + 1,
       })
       .eq('id', statRow.id);
+    if (statUpdateError) {
+      throw new Error(`Failed to update category stats: ${statUpdateError.message}`);
+    }
   } else {
-    await (supabase.from('category_stats') as any).insert({
+    const { error: statInsertError } = await (supabase.from('category_stats') as any).insert({
       type: question.type,
       correct_count: isCorrect ? 1 : 0,
       total_count: 1,
     });
+    if (statInsertError) {
+      throw new Error(`Failed to insert category stats: ${statInsertError.message}`);
+    }
   }
 
   return { isCorrect, explanation, sourcePage: question.source_page };
