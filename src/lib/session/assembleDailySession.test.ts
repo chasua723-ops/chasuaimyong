@@ -85,6 +85,31 @@ describe('assembleDailySession', () => {
     expect(supabase.inserted.vocab_of_the_day).toBeUndefined();
   });
 
+  it('inserts no daily_sessions row when question generation fails, so the day can be retried', async () => {
+    const supabase = createMockSupabase(baseTables);
+    vi.mocked(generateQuestions).mockRejectedValueOnce(new Error('Claude blew up'));
+
+    await expect(
+      assembleDailySession(supabase as any, {} as any, '2026-08-03')
+    ).rejects.toThrow('Claude blew up');
+
+    expect(supabase.inserted.daily_sessions).toBeUndefined();
+    expect(supabase.inserted.questions).toBeUndefined();
+    expect(supabase.inserted.vocab_of_the_day).toBeUndefined();
+  });
+
+  it('inserts no daily_sessions row when vocab curation fails', async () => {
+    const supabase = createMockSupabase(baseTables);
+    vi.mocked(curateVocab).mockRejectedValueOnce(new Error('vocab blew up'));
+
+    await expect(
+      assembleDailySession(supabase as any, {} as any, '2026-08-03')
+    ).rejects.toThrow('vocab blew up');
+
+    expect(supabase.inserted.daily_sessions).toBeUndefined();
+    expect(supabase.inserted.questions).toBeUndefined();
+  });
+
   it('adds exactly one essay question, and only for the book assigned to today\'s essay slot', async () => {
     const supabase = createMockSupabase(baseTables);
 

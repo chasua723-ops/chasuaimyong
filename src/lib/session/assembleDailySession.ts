@@ -34,10 +34,10 @@ export async function assembleDailySession(
   const dayIndex = Math.floor(new Date(today).getTime() / (1000 * 60 * 60 * 24));
   const essayBook = books[dayIndex % books.length];
 
-  const { data: session } = await (supabase.from('daily_sessions') as any)
-    .insert({ date: today, essay_book_id: essayBook.id, completed: false })
-    .select()
-    .single();
+  // Everything that can throw (AI generation, curation) happens BEFORE the
+  // daily_sessions insert, so a partial failure leaves no session row behind and
+  // the next request retries from scratch instead of returning a dead session.
+  const pendingQuestions: any[] = [];
 
   for (const book of books) {
     const range = calculateDailyRange({
@@ -78,17 +78,17 @@ export async function assembleDailySession(
       referenceExcerpts,
     });
 
-    const rows = generated.map((q) => ({
-      book_id: book.id,
-      session_id: session.id,
-      type: q.type,
-      source_page: q.sourcePage,
-      prompt: q.prompt,
-      choices: q.choices ?? null,
-      correct_answer: q.correctAnswer,
-      used_reference: !!referenceExcerpts,
-    }));
-    await (supabase.from('questions') as any).insert(rows);
+    for (const q of generated) {
+      pendingQuestions.push({
+        book_id: book.id,
+        type: q.type,
+        source_page: q.sourcePage,
+        prompt: q.prompt,
+        choices: q.choices ?? null,
+        correct_answer: q.correctAnswer,
+        used_reference: !!referenceExcerpts,
+      });
+    }
 
     if (book.id === essayBook.id) {
       const essayGenerated = await generateQuestions(aiClient, {
@@ -96,17 +96,17 @@ export async function assembleDailySession(
         pages: pageRange,
         types: ['essay'],
       });
-      const essayRows = essayGenerated.map((q) => ({
-        book_id: book.id,
-        session_id: session.id,
-        type: 'essay' as const,
-        source_page: q.sourcePage,
-        prompt: q.prompt,
-        choices: null,
-        correct_answer: q.correctAnswer,
-        used_reference: false,
-      }));
-      await (supabase.from('questions') as any).insert(essayRows);
+      for (const q of essayGenerated) {
+        pendingQuestions.push({
+          book_id: book.id,
+          type: 'essay' as const,
+          source_page: q.sourcePage,
+          prompt: q.prompt,
+          choices: null,
+          correct_answer: q.correctAnswer,
+          used_reference: false,
+        });
+      }
     }
   }
 
@@ -115,17 +115,34 @@ export async function assembleDailySession(
     .eq('date', today)
     .maybeSingle();
 
+  let pendingVocab: Record<string, unknown> | null = null;
   if (!existingVocab) {
     const { data: pastVocab } = await (supabase.from('vocab_of_the_day') as any).select('word_zh');
     const vocab = await curateVocab(aiClient, (pastVocab ?? []).map((v: any) => v.word_zh));
-    await (supabase.from('vocab_of_the_day') as any).insert({
+    pendingVocab = {
       date: today,
       word_zh: vocab.wordZh,
       pinyin: vocab.pinyin,
       meaning_ko: vocab.meaningKo,
       example_zh: vocab.exampleZh,
       example_ko: vocab.exampleKo,
-    });
+    };
+  }
+
+  // Nothing above threw: now it is safe to persist the session and its content.
+  const { data: session } = await (supabase.from('daily_sessions') as any)
+    .insert({ date: today, essay_book_id: essayBook.id, completed: false })
+    .select()
+    .single();
+
+  if (pendingQuestions.length > 0) {
+    await (supabase.from('questions') as any).insert(
+      pendingQuestions.map((q) => ({ ...q, session_id: session.id }))
+    );
+  }
+
+  if (pendingVocab) {
+    await (supabase.from('vocab_of_the_day') as any).insert(pendingVocab);
   }
 
   return session;
