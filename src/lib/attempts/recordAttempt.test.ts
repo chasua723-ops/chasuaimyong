@@ -19,6 +19,7 @@ function baseTables(overrides: Partial<Record<string, any[]>> = {}) {
         type: 'grammar',
       },
     ],
+    books: [{ id: 'b1', name: '중국어 문법' }],
     book_pages: [{ book_id: 'b1', page_num: 12, content: '把자문 설명' }],
     attempts: [],
     category_stats: [],
@@ -57,6 +58,10 @@ describe('recordAttempt', () => {
       correct_count: 0,
       total_count: 1,
     });
+    expect(explainAnswer).toHaveBeenCalledWith(
+      {} as any,
+      expect.objectContaining({ bookName: '중국어 문법', pageContent: '把자문 설명' })
+    );
   });
 
   it('throws a diagnosable error when the attempts insert fails', async () => {

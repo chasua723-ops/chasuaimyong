@@ -28,8 +28,13 @@ export async function recordAttempt(
       .eq('page_num', question.source_page)
       .single();
 
+    const { data: book } = await (supabase.from('books') as any)
+      .select('name')
+      .eq('id', question.book_id)
+      .single();
+
     explanation = await explainAnswer(aiClient, {
-      bookName: '',
+      bookName: book?.name ?? '',
       sourcePage: question.source_page,
       pageContent: page?.content ?? '',
       questionPrompt: question.prompt,

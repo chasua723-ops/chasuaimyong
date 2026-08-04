@@ -5,6 +5,17 @@ import { calculateWeights, pickWeightedTypes, type CategoryStat } from '@/lib/ad
 import { generateQuestions } from '@/lib/ai/generateQuestions';
 import { curateVocab } from '@/lib/ai/curateVocab';
 
+/** A question row built in memory, before a session id exists to attach it to. */
+interface PendingQuestion {
+  book_id: string;
+  type: string;
+  source_page: number;
+  prompt: string;
+  choices: string[] | null;
+  correct_answer: string;
+  used_reference: boolean;
+}
+
 const QUESTIONS_PER_BOOK = 3;
 const QUIZ_TYPES = ['grammar', 'vocab', 'reading', 'theory'] as const;
 
@@ -37,7 +48,7 @@ export async function assembleDailySession(
   // Everything that can throw (AI generation, curation) happens BEFORE the
   // daily_sessions insert, so a partial failure leaves no session row behind and
   // the next request retries from scratch instead of returning a dead session.
-  const pendingQuestions: any[] = [];
+  const pendingQuestions: PendingQuestion[] = [];
 
   for (const book of books) {
     const range = calculateDailyRange({
@@ -93,7 +104,7 @@ export async function assembleDailySession(
         prompt: q.prompt,
         choices: q.choices ?? null,
         correct_answer: q.correctAnswer,
-        used_reference: !!referenceExcerpts,
+        used_reference: !!referenceExcerpts?.length,
       });
     }
 

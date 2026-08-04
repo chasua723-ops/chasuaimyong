@@ -1,25 +1,31 @@
 import { describe, it, expect, vi } from 'vitest';
 import { recordEssayAttempt } from './recordEssayAttempt';
 import { createMockSupabase } from '../../../tests/helpers/mockSupabase';
+import { gradeEssay } from '../ai/gradeEssay';
 
 vi.mock('../ai/gradeEssay', () => ({
   gradeEssay: vi.fn().mockResolvedValue({ contentScore: 75, chineseScore: 55, feedback: '표현 개선 필요' }),
 }));
 
+function baseTables() {
+  return {
+    questions: [
+      {
+        id: 'q1',
+        book_id: 'b1',
+        source_page: 30,
+        prompt: '루쉰 문학의 특징을 서술하시오',
+      },
+    ],
+    books: [{ id: 'b1', name: '중국문학사' }],
+    book_pages: [{ book_id: 'b1', page_num: 30, content: '루쉰의 광인일기' }],
+    attempts: [],
+  };
+}
+
 describe('recordEssayAttempt', () => {
   it('saves the Korean draft and Chinese answer separately with their AI scores', async () => {
-    const supabase = createMockSupabase({
-      questions: [
-        {
-          id: 'q1',
-          book_id: 'b1',
-          source_page: 30,
-          prompt: '루쉰 문학의 특징을 서술하시오',
-        },
-      ],
-      book_pages: [{ book_id: 'b1', page_num: 30, content: '루쉰의 광인일기' }],
-      attempts: [],
-    });
+    const supabase = createMockSupabase(baseTables());
 
     const result = await recordEssayAttempt(supabase as any, {} as any, {
       questionId: 'q1',
@@ -36,5 +42,20 @@ describe('recordEssayAttempt', () => {
       chinese_score: 55,
       ai_feedback: '표현 개선 필요',
     });
+  });
+
+  it('passes the real book name to the grader instead of an empty string', async () => {
+    const supabase = createMockSupabase(baseTables());
+
+    await recordEssayAttempt(supabase as any, {} as any, {
+      questionId: 'q1',
+      koreanDraft: '초안',
+      chineseAnswer: '答案',
+    });
+
+    expect(gradeEssay).toHaveBeenCalledWith(
+      {} as any,
+      expect.objectContaining({ bookName: '중국문학사' })
+    );
   });
 });

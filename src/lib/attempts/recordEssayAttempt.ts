@@ -25,8 +25,13 @@ export async function recordEssayAttempt(
     .eq('page_num', question.source_page)
     .single();
 
+  const { data: book } = await (supabase.from('books') as any)
+    .select('name')
+    .eq('id', question.book_id)
+    .single();
+
   const grade = await gradeEssay(aiClient, {
-    bookName: '',
+    bookName: book?.name ?? '',
     pages: [{ pageNum: question.source_page, content: page?.content ?? '' }],
     questionPrompt: question.prompt,
     koreanDraft: input.koreanDraft,
