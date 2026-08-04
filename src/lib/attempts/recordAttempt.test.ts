@@ -58,4 +58,37 @@ describe('recordAttempt', () => {
       total_count: 1,
     });
   });
+
+  it('updates an existing category_stats row in place on a wrong answer, without inserting a new one', async () => {
+    // Wrong answer chosen so we can assert total_count increments while
+    // correct_count is left untouched -- the branch most likely to hide a
+    // swapped-field or wrong-row-targeted regression.
+    const supabase = createMockSupabase(
+      baseTables({
+        category_stats: [{ id: 'stat1', type: 'grammar', correct_count: 3, total_count: 4 }],
+      })
+    );
+
+    await recordAttempt(supabase as any, {} as any, {
+      questionId: 'q1',
+      userAnswer: '틀린 답',
+    });
+
+    // No new row should have been inserted -- this must be an update.
+    expect(supabase.inserted.category_stats ?? []).toHaveLength(0);
+
+    // Re-query the table to see the mutated persistent store (the mock's
+    // update().eq() mutates store[table] in place per Task 14).
+    const { data: updated } = await (supabase.from('category_stats') as any)
+      .select('*')
+      .eq('id', 'stat1')
+      .single();
+
+    expect(updated).toMatchObject({
+      id: 'stat1',
+      type: 'grammar',
+      correct_count: 3,
+      total_count: 5,
+    });
+  });
 });
