@@ -104,4 +104,23 @@ describe('Daily session page', () => {
     expect(await screen.findByText('内卷')).toBeInTheDocument();
     expect(screen.getByText('AI 큐레이션')).toBeInTheDocument();
   });
+
+  it('shows an error message instead of the loading state when the session request fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === '/api/session/today') {
+          return { ok: false, status: 500 } as any;
+        }
+        throw new Error(`unhandled fetch: ${url}`);
+      })
+    );
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<Page />);
+
+    expect(await screen.findByText(/불러오지 못했어요/)).toBeInTheDocument();
+    expect(screen.queryByText('불러오는 중...')).not.toBeInTheDocument();
+    consoleError.mockRestore();
+  });
 });
