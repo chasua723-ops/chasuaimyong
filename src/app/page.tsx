@@ -1,46 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-interface Question {
-  id: string;
-  book_id: string;
-  type: string;
-  prompt: string;
-  choices: string[] | null;
-  source_page: number;
-}
-
-interface Vocab {
-  word_zh: string;
-  pinyin: string;
-  meaning_ko: string;
-}
-
-interface BookRange {
-  bookId: string;
-  name: string;
-  startPage: number;
-  endPage: number;
-}
-
-interface SessionData {
-  session: { id: string; essay_book_id: string };
-  questions: Question[];
-  vocab: Vocab | null;
-  bookRanges: BookRange[];
-}
-
-type QuizFeedback = 'correct' | { explanation: string; sourcePage: number };
-interface EssayFeedback {
-  contentScore: number;
-  chineseScore: number;
-  feedback: string;
-}
+import CoverScreen from './components/CoverScreen';
+import BookSection from './components/BookSection';
+import VocabCard from './components/VocabCard';
+import type { SessionData, QuizFeedback, EssayFeedback } from './components/types';
+import styles from './page.module.css';
 
 export default function Page() {
   const [data, setData] = useState<SessionData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [started, setStarted] = useState(false);
   const [quizFeedback, setQuizFeedback] = useState<Record<string, QuizFeedback>>({});
   const [essayFeedback, setEssayFeedback] = useState<Record<string, EssayFeedback>>({});
   const [koreanDrafts, setKoreanDrafts] = useState<Record<string, string>>({});
@@ -93,81 +63,49 @@ export default function Page() {
     setEssayFeedback((prev) => ({ ...prev, [questionId]: result }));
   }
 
-  if (error) return <p>{error}</p>;
-  if (!data) return <p>불러오는 중...</p>;
+  if (error) return <p className={styles.page}>{error}</p>;
+  if (!data) return <p className={styles.page}>불러오는 중...</p>;
+
+  if (!started) {
+    return (
+      <main className={styles.page}>
+        <CoverScreen bookRanges={data.bookRanges} onStart={() => setStarted(true)} />
+      </main>
+    );
+  }
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', padding: 16 }}>
-      <h1>오늘의 학습</h1>
+    <main className={styles.page}>
+      {data.bookRanges.map((range) => {
+        const bookQuestions = data.questions.filter((q) => q.book_id === range.bookId);
+        const quizQuestions = bookQuestions.filter((q) => q.type !== 'essay');
+        const essayQuestion = bookQuestions.find((q) => q.type === 'essay');
 
-      <section>
-        <h2>오늘의 회독 범위</h2>
-        <ul>
-          {data.bookRanges.map((r) => (
-            <li key={r.bookId}>
-              {r.name}: {r.startPage}~{r.endPage}페이지
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {data.questions.map((q) => {
-        if (q.type === 'essay') {
-          const fb = essayFeedback[q.id];
-          return (
-            <section key={q.id} style={{ marginBottom: 24 }}>
-              <p>{q.prompt}</p>
-              <label>
-                1단계: 한국어로 내용 정리
-                <textarea
-                  value={koreanDrafts[q.id] ?? ''}
-                  onChange={(e) => setKoreanDrafts((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                />
-              </label>
-              <label>
-                2단계: 중국어로 답안 작성
-                <textarea
-                  value={chineseAnswers[q.id] ?? ''}
-                  onChange={(e) => setChineseAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                />
-              </label>
-              <button onClick={() => submitEssay(q.id)}>제출</button>
-              {fb && (
-                <p>
-                  내용 정확도 {fb.contentScore}점 / 중국어 표현 {fb.chineseScore}점 — {fb.feedback}
-                </p>
-              )}
-            </section>
-          );
-        }
-
-        const fb = quizFeedback[q.id];
         return (
-          <section key={q.id} style={{ marginBottom: 24 }}>
-            <p>{q.prompt}</p>
-            {(q.choices ?? []).map((choice) => (
-              <button key={choice} onClick={() => submitAnswer(q.id, choice)} style={{ marginRight: 8 }}>
-                {choice}
-              </button>
-            ))}
-            {fb === 'correct' && <p>정답입니다</p>}
-            {fb && fb !== 'correct' && (
-              <p>
-                {fb.explanation} ({fb.sourcePage}페이지 참고)
-              </p>
-            )}
-          </section>
+          <BookSection
+            key={range.bookId}
+            name={range.name}
+            startPage={range.startPage}
+            endPage={range.endPage}
+            quizQuestions={quizQuestions}
+            essayQuestion={essayQuestion}
+            quizFeedback={quizFeedback}
+            onSubmitQuiz={submitAnswer}
+            koreanDraft={essayQuestion ? koreanDrafts[essayQuestion.id] ?? '' : ''}
+            chineseAnswer={essayQuestion ? chineseAnswers[essayQuestion.id] ?? '' : ''}
+            essayFeedback={essayQuestion ? essayFeedback[essayQuestion.id] : undefined}
+            onKoreanChange={(value) =>
+              essayQuestion && setKoreanDrafts((prev) => ({ ...prev, [essayQuestion.id]: value }))
+            }
+            onChineseChange={(value) =>
+              essayQuestion && setChineseAnswers((prev) => ({ ...prev, [essayQuestion.id]: value }))
+            }
+            onSubmitEssay={() => essayQuestion && submitEssay(essayQuestion.id)}
+          />
         );
       })}
 
-      {data.vocab && (
-        <section>
-          <h2>오늘의 어휘 (AI 큐레이션)</h2>
-          <p>
-            <strong>{data.vocab.word_zh}</strong> ({data.vocab.pinyin}) — {data.vocab.meaning_ko}
-          </p>
-        </section>
-      )}
+      {data.vocab && <VocabCard vocab={data.vocab} />}
     </main>
   );
 }

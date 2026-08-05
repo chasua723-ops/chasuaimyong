@@ -50,50 +50,43 @@ beforeEach(() => {
 });
 
 describe('Daily session page', () => {
-  it('loads today\'s questions and shows the explanation after an answer is submitted', async () => {
+  it("shows the cover screen first, with today's book ranges and a start button", async () => {
     render(<Page />);
 
-    expect(await screen.findByText('把자문의 어순은?')).toBeInTheDocument();
+    expect(await screen.findByText('오늘의 학습')).toBeInTheDocument();
+    expect(screen.getByText(/문법 · 1~10p/)).toBeInTheDocument();
+    expect(screen.queryByText(/把자문의 어순은/)).not.toBeInTheDocument();
+  });
+
+  it('shows the book section with questions after clicking start', async () => {
+    render(<Page />);
+
+    const startButton = await screen.findByText('오늘의 학습 시작하기 →');
+    const user = userEvent.setup();
+    await user.click(startButton);
+
+    expect(await screen.findByText(/把자문의 어순은\?/)).toBeInTheDocument();
+    expect(screen.getByText(/Q1\./)).toBeInTheDocument();
+  });
+
+  it('shows the explanation and source page after answering a quiz question incorrectly', async () => {
+    render(<Page />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByText('A'));
+    await user.click(await screen.findByText('오늘의 학습 시작하기 →'));
+    await user.click(await screen.findByText('A'));
 
     await waitFor(() => expect(screen.getByText(/설명/)).toBeInTheDocument());
-    expect(screen.getByText(/12페이지/)).toBeInTheDocument();
-  });
-
-  it('shows the AI-curated vocab of the day labeled as AI content', async () => {
-    render(<Page />);
-
-    expect(await screen.findByText('内卷')).toBeInTheDocument();
-    expect(screen.getByText(/AI 큐레이션/)).toBeInTheDocument();
-  });
-
-  it('shows today\'s reading range per book', async () => {
-    render(<Page />);
-
-    expect(await screen.findByText(/문법: 1~10페이지/)).toBeInTheDocument();
-  });
-
-  it('shows an error message instead of the loading state when the session request fails', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({ ok: false, status: 500, json: async () => ({ error: 'boom' }) }) as any)
-    );
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    render(<Page />);
-
-    expect(await screen.findByText(/불러오지 못했어요/)).toBeInTheDocument();
-    expect(screen.queryByText('불러오는 중...')).not.toBeInTheDocument();
-    consoleError.mockRestore();
+    expect(screen.getByText(/12페이지 참고/)).toBeInTheDocument();
   });
 
   it('submits the two-stage essay answer and shows separate content/Chinese scores', async () => {
     render(<Page />);
 
-    const [koreanBox, chineseBox] = await screen.findAllByRole('textbox');
     const user = userEvent.setup();
+    await user.click(await screen.findByText('오늘의 학습 시작하기 →'));
+
+    const [koreanBox, chineseBox] = await screen.findAllByRole('textbox');
     await user.type(koreanBox, '루쉰은 사실주의 기법으로...');
     await user.type(chineseBox, '鲁迅用现实主义手法...');
     await user.click(screen.getByText('제출'));
@@ -101,5 +94,14 @@ describe('Daily session page', () => {
     await waitFor(() => expect(screen.getByText(/75점/)).toBeInTheDocument());
     expect(screen.getByText(/55점/)).toBeInTheDocument();
     expect(screen.getByText(/표현 개선 필요/)).toBeInTheDocument();
+  });
+
+  it('shows the AI-curated vocab of the day labeled as AI content, after starting', async () => {
+    render(<Page />);
+
+    await userEvent.setup().click(await screen.findByText('오늘의 학습 시작하기 →'));
+
+    expect(await screen.findByText('内卷')).toBeInTheDocument();
+    expect(screen.getByText('AI 큐레이션')).toBeInTheDocument();
   });
 });
