@@ -1,0 +1,225 @@
+/* src/app/components/session.module.css */
+
+/* 표지 */
+.cover {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.coverDate {
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 1.5px;
+}
+
+.coverTitle {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 4px 0 16px;
+}
+
+.coverRanges {
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 280px;
+  text-align: left;
+}
+
+.coverRangeItem {
+  font-size: 13px;
+  color: var(--foreground);
+  margin-bottom: 6px;
+}
+
+.coverRangeItem:last-child {
+  margin-bottom: 0;
+}
+
+.startButton {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 32px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* 교재 섹션 */
+.bookSection {
+  margin-bottom: 28px;
+}
+
+.bookHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.bookIcon {
+  font-size: 15px;
+}
+
+.bookName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.bookRangeBadge {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--badge-background);
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+
+/* 문제 카드 (노트 줄무늬 포함) */
+.questionCard {
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 26px,
+    var(--notebook-line) 27px
+  );
+  background-position: 0 34px;
+}
+
+.questionPrompt {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.choiceList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.choiceButton {
+  background: var(--background);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--foreground);
+}
+
+.feedbackCorrect {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.feedbackWrong {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--foreground);
+}
+
+/* 서술형 */
+.essayWrapper {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--card-border);
+}
+
+.essayBadge {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--accent);
+  background: var(--badge-background);
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.essayPrompt {
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.essayStepLabel {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.essayTextarea {
+  width: 100%;
+  background: var(--background);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  min-height: 60px;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.essaySubmitButton {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  border: none;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.essayFeedback {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+/* 오늘의 어휘 */
+.vocabCard {
+  background: var(--vocab-background);
+  border: 1px solid var(--vocab-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 8px;
+}
+
+.vocabHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.vocabBadge {
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--badge-background);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.vocabWord {
+  font-size: 13px;
+}
