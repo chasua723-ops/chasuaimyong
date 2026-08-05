@@ -27,15 +27,21 @@ export default function EssayQuestion({
       <span className={styles.essayBadge}>서술형</span>
       <p className={styles.essayPrompt}>{question.prompt}</p>
 
-      <div className={styles.essayStepLabel}>1단계 · 한국어로 내용 정리</div>
+      <label className={styles.essayStepLabel} htmlFor={`ko-${question.id}`}>
+        1단계 · 한국어로 내용 정리
+      </label>
       <textarea
+        id={`ko-${question.id}`}
         className={styles.essayTextarea}
         value={koreanDraft}
         onChange={(e) => onKoreanChange(e.target.value)}
       />
 
-      <div className={styles.essayStepLabel}>2단계 · 중국어로 답안 작성</div>
+      <label className={styles.essayStepLabel} htmlFor={`zh-${question.id}`}>
+        2단계 · 중국어로 답안 작성
+      </label>
       <textarea
+        id={`zh-${question.id}`}
         className={styles.essayTextarea}
         value={chineseAnswer}
         onChange={(e) => onChineseChange(e.target.value)}

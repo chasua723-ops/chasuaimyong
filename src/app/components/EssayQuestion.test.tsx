@@ -47,7 +47,8 @@ describe('EssayQuestion', () => {
       />
     );
 
-    const [koreanBox, chineseBox] = screen.getAllByRole('textbox');
+    const koreanBox = screen.getByLabelText(/1단계/);
+    const chineseBox = screen.getByLabelText(/2단계/);
     const user = userEvent.setup();
     await user.type(koreanBox, '한');
     await user.type(chineseBox, '中');
