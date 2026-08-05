@@ -43,3 +43,6 @@ next-env.d.ts
 
 # worktrees
 .worktrees/
+
+# superpowers scratch (brainstorm mockups, sdd workspaces)
+.superpowers/
