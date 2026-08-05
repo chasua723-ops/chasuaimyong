@@ -1,0 +1,30 @@
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import CoverScreen from './CoverScreen';
+import type { BookRange } from './types';
+
+const bookRanges: BookRange[] = [
+  { bookId: 'b1', name: '문법', startPage: 11, endPage: 19 },
+  { bookId: 'b2', name: '문학개론', startPage: 8, endPage: 14 },
+];
+
+describe('CoverScreen', () => {
+  it('renders the title and each book range', () => {
+    render(<CoverScreen bookRanges={bookRanges} onStart={vi.fn()} />);
+
+    expect(screen.getByText('오늘의 학습')).toBeInTheDocument();
+    expect(screen.getByText(/문법 · 11~19p/)).toBeInTheDocument();
+    expect(screen.getByText(/문학개론 · 8~14p/)).toBeInTheDocument();
+  });
+
+  it('calls onStart when the start button is clicked', async () => {
+    const onStart = vi.fn();
+    render(<CoverScreen bookRanges={bookRanges} onStart={onStart} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('오늘의 학습 시작하기 →'));
+
+    expect(onStart).toHaveBeenCalled();
+  });
+});
