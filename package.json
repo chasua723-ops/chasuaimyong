@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "ingest:book": "tsx scripts/ingest-book-cli.ts",
     "ingest:reference": "tsx scripts/ingest-reference-cli.ts",
-    "reocr:book": "tsx scripts/reocr-book-cli.ts"
+    "reocr:book": "tsx scripts/reocr-book-cli.ts",
+    "reocr:reference": "tsx scripts/reocr-reference-cli.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
