@@ -27,4 +27,11 @@ describe('CoverScreen', () => {
 
     expect(onStart).toHaveBeenCalled();
   });
+
+  it('links to the wrong-answer notebook via the binder tab', () => {
+    render(<CoverScreen bookRanges={bookRanges} onStart={vi.fn()} />);
+
+    const link = screen.getByText('오답노트').closest('a');
+    expect(link).toHaveAttribute('href', '/notebook');
+  });
 });

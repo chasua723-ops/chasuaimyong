@@ -2,6 +2,7 @@
 
 /* 표지 */
 .cover {
+  position: relative;
   min-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -54,6 +55,21 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
+}
+
+.notebookTab {
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--notebook-accent);
+  color: #ffffff;
+  border-radius: 0 8px 8px 0;
+  padding: 14px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  writing-mode: vertical-rl;
+  letter-spacing: 2px;
 }
 
 /* 교재 섹션 */
