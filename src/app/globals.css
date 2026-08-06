@@ -11,6 +11,9 @@
   --badge-background: #e9f5f3;
   --vocab-background: #fbf6ec;
   --vocab-border: #eee0c8;
+  --notebook-accent: #f4832b;
+  --notebook-accent-bg: #fef1e2;
+  --notebook-accent-text: #b5590a;
 }
 
 html {

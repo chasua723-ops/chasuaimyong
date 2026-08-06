@@ -139,6 +139,42 @@
   color: var(--foreground);
 }
 
+.questionCardOvercome {
+  opacity: 0.6;
+}
+
+.questionPromptRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.questionPromptRow .questionPrompt {
+  margin-bottom: 0;
+}
+
+.overcomeBadge {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--notebook-accent-text);
+  background: var(--notebook-accent-bg);
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.overcomeMeta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.choiceButton:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
 /* 서술형 */
 .essayWrapper {
   margin-top: 14px;

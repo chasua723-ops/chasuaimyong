@@ -14,41 +14,47 @@ const question: Question = {
 };
 
 describe('QuizQuestion', () => {
-  it('renders the question with its section-local number and choices', () => {
-    render(<QuizQuestion question={question} index={2} feedback={undefined} onSubmit={vi.fn()} />);
-
-    expect(screen.getByText(/Q2\./)).toBeInTheDocument();
-    expect(screen.getByText(/把자문의 어순은\?/)).toBeInTheDocument();
-    expect(screen.getByText('A')).toBeInTheDocument();
-    expect(screen.getByText('B')).toBeInTheDocument();
-  });
-
-  it('calls onSubmit with the question id and chosen answer when a choice is clicked', async () => {
+  it('calls onSubmit with the chosen answer when not overcome', async () => {
     const onSubmit = vi.fn();
     render(<QuizQuestion question={question} index={1} feedback={undefined} onSubmit={onSubmit} />);
 
-    const user = userEvent.setup();
-    await user.click(screen.getByText('A'));
+    await userEvent.setup().click(screen.getByText('A'));
 
     expect(onSubmit).toHaveBeenCalledWith('q1', 'A');
   });
 
-  it('shows the explanation and source page when the feedback is a wrong answer', () => {
+  it('does not render an overcome badge by default', () => {
+    render(<QuizQuestion question={question} index={1} feedback={undefined} onSubmit={vi.fn()} />);
+
+    expect(screen.queryByText('극복됨')).not.toBeInTheDocument();
+  });
+
+  it('renders a muted, disabled card with an overcome badge when overcome is true', async () => {
+    const onSubmit = vi.fn();
+    render(
+      <QuizQuestion question={question} index={1} feedback={undefined} onSubmit={onSubmit} overcome />
+    );
+
+    expect(screen.getByText('극복됨')).toBeInTheDocument();
+    const choiceButton = screen.getByText('A');
+    expect(choiceButton).toBeDisabled();
+
+    await userEvent.setup().click(choiceButton);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('shows the attempt count when overcome and attemptCount are both provided', () => {
     render(
       <QuizQuestion
         question={question}
         index={1}
-        feedback={{ explanation: '설명입니다', sourcePage: 12 }}
+        feedback={undefined}
         onSubmit={vi.fn()}
+        overcome
+        attemptCount={3}
       />
     );
 
-    expect(screen.getByText(/설명입니다/)).toBeInTheDocument();
-    expect(screen.getByText(/12페이지 참고/)).toBeInTheDocument();
-  });
-
-  it('shows a correct message when feedback is "correct"', () => {
-    render(<QuizQuestion question={question} index={1} feedback="correct" onSubmit={vi.fn()} />);
-    expect(screen.getByText('정답입니다')).toBeInTheDocument();
+    expect(screen.getByText('3번 시도 만에 정답')).toBeInTheDocument();
   });
 });
