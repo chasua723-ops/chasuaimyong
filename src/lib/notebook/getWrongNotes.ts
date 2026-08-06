@@ -32,7 +32,7 @@ export async function getWrongNotes(supabase: SupabaseClient): Promise<WrongNote
   const { data: attempts } = await (supabase.from('attempts') as any).select('*');
   const { data: books } = await (supabase.from('books') as any).select('*');
 
-  const bookNameById = new Map((books ?? []).map((b: any) => [b.id, b.name]));
+  const bookNameById = new Map<string, string>((books ?? []).map((b: any) => [b.id, b.name]));
 
   const attemptsByQuestion = new Map<string, any[]>();
   for (const attempt of attempts ?? []) {
