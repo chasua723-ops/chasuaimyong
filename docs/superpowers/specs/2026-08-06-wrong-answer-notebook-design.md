@@ -68,15 +68,24 @@ unchanged — no new write endpoint. The client optimistically flips that questi
 
 ## UI
 
-- **Entry point**: `CoverScreen` gets a vertical "오답노트" tab fixed to the right edge, styled as
-  part of the existing binder/notebook aesthetic. Clicking navigates to a new route `/notebook`
-  (plain link — no client-side state machine needed since it's a separate page).
+- **Color**: the notebook gets its own accent, distinct from the main teal (`--accent`), to read as
+  a different "binder tab" section — a bright orange, new CSS variable `--notebook-accent: #f4832b`
+  (with a paired light tint `--notebook-accent-bg: #fef1e2` / text-on-tint `#b5590a` for badges).
+- **Entry point**: `CoverScreen` gets a vertical "오답노트" tab fixed to the right edge, filled with
+  `--notebook-accent`, styled as part of the existing binder/notebook aesthetic. Clicking navigates
+  to a new route `/notebook` (plain link — no client-side state machine needed since it's a separate
+  page).
 - **`/notebook` page**: fetches `GET /api/notebook` on mount. Renders one section per group:
-  - Header: `{label} {outstandingCount}/{totalCount} 미해결 ({percentage}%)`
+  - Header: `{label} {outstandingCount}/{totalCount} 미해결 ({percentage}%)`, the count badge styled
+    with `--notebook-accent-bg`/`--notebook-accent` text.
   - Each question rendered with the **existing `QuizQuestion` component** (already takes
     `question`, `index`, `feedback`, `onSubmit` — no changes needed for outstanding questions).
+    Reading (`reading`) questions carry their full source passage inside `question.prompt` already
+    (see `generateQuestions.ts` — passage and question are one generated string), so those cards
+    will render noticeably taller than grammar/vocab/theory cards. This is expected — no truncation
+    or collapse in v1.
     Overcome questions render the same component but visually muted (reduced opacity) with an
-    "극복됨" badge, and are not resubmittable.
+    "극복됨" badge (`--notebook-accent-bg`/`--notebook-accent` text), and are not resubmittable.
   - Submitting a wrong-notes question calls the same `submitAnswer` logic already used on the
     session page (POST to `/api/attempts`, show `QuizFeedback` inline).
 - **Empty state**: if `groups` is empty, show "아직 오답이 없어요 🎉".
