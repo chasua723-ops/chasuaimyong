@@ -18,20 +18,56 @@ export interface ReocrBookArgs {
   concurrency?: number;
 }
 
+export interface PageFailure {
+  pageNum: number;
+  error: string;
+}
+
 function dataUrlToBase64(dataUrl: string): string {
   const commaIndex = dataUrl.indexOf(',');
   return commaIndex === -1 ? dataUrl : dataUrl.slice(commaIndex + 1);
+}
+
+/**
+ * Processes one page: vision-OCR it, then write the result. Retries once on
+ * failure (content-filter trips and transient API errors are sometimes
+ * non-deterministic) before giving up on this page.
+ */
+async function processPage(
+  shot: { pageNumber: number; dataUrl: string },
+  args: ReocrBookArgs,
+  supabase: SupabaseClient,
+  aiClient: Anthropic
+): Promise<string> {
+  const base64 = dataUrlToBase64(shot.dataUrl);
+  const text = await askClaudeVision(aiClient, base64, 'image/png', OCR_USER_PROMPT, {
+    system: OCR_SYSTEM_PROMPT,
+    maxTokens: 2048,
+  });
+
+  const { error } = await supabase
+    .from('book_pages')
+    .update({ content: text })
+    .eq('book_id', args.bookId)
+    .eq('page_num', shot.pageNumber);
+  if (error) {
+    throw new Error(`Failed to update page ${shot.pageNumber}: ${error.message}`);
+  }
+
+  return text;
 }
 
 export async function reocrBook(
   args: ReocrBookArgs,
   supabase: SupabaseClient,
   aiClient: Anthropic,
-  onProgress?: (pageNum: number, totalPages: number, charCount: number) => void
-): Promise<{ pagesProcessed: number }> {
+  onProgress?: (pageNum: number, totalPages: number, charCount: number) => void,
+  onError?: (pageNum: number, error: Error) => void
+): Promise<{ pagesProcessed: number; failures: PageFailure[] }> {
   const buffer = await readFile(args.filePath);
   const parser = new PDFParse({ data: buffer });
   let pagesProcessed = 0;
+  const failures: PageFailure[] = [];
 
   try {
     const info = await parser.getInfo();
@@ -55,23 +91,22 @@ export async function reocrBook(
 
       await Promise.all(
         screenshots.pages.map(async (shot) => {
-          const base64 = dataUrlToBase64(shot.dataUrl);
-          const text = await askClaudeVision(aiClient, base64, 'image/png', OCR_USER_PROMPT, {
-            system: OCR_SYSTEM_PROMPT,
-            maxTokens: 2048,
-          });
-
-          const { error } = await supabase
-            .from('book_pages')
-            .update({ content: text })
-            .eq('book_id', args.bookId)
-            .eq('page_num', shot.pageNumber);
-          if (error) {
-            throw new Error(`Failed to update page ${shot.pageNumber}: ${error.message}`);
+          try {
+            let text: string;
+            try {
+              text = await processPage(shot, args, supabase, aiClient);
+            } catch {
+              // one retry — content-filter trips and transient API errors
+              // are sometimes non-deterministic
+              text = await processPage(shot, args, supabase, aiClient);
+            }
+            pagesProcessed++;
+            onProgress?.(shot.pageNumber, totalPages, text.length);
+          } catch (err) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            failures.push({ pageNum: shot.pageNumber, error: error.message });
+            onError?.(shot.pageNumber, error);
           }
-
-          pagesProcessed++;
-          onProgress?.(shot.pageNumber, totalPages, text.length);
         })
       );
     }
@@ -79,5 +114,5 @@ export async function reocrBook(
     await parser.destroy();
   }
 
-  return { pagesProcessed };
+  return { pagesProcessed, failures };
 }

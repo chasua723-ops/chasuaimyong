@@ -28,16 +28,23 @@ async function main() {
 
   console.log(`Re-OCR'ing ${book.name} (${book.total_pages} pages)${startPage ? ` from page ${startPage}${endPage ? ` to ${endPage}` : ''}` : ''}...`);
 
-  const { pagesProcessed } = await reocrBook(
+  const { pagesProcessed, failures } = await reocrBook(
     { filePath, bookId: book.id, startPage, endPage, concurrency: 5 },
     supabase,
     getAnthropicClient(),
     (pageNum, total, charCount) => {
       console.log(`  page ${pageNum}/${total}: ${charCount} chars`);
+    },
+    (pageNum, error) => {
+      console.error(`  page ${pageNum}: FAILED — ${error.message}`);
     }
   );
 
   console.log(`Done. Re-OCR'd ${pagesProcessed} pages for ${book.name}.`);
+  if (failures.length > 0) {
+    console.log(`${failures.length} page(s) failed: ${failures.map((f) => f.pageNum).join(', ')}`);
+    console.log('Re-run with --startPage/--endPage targeting just those pages once resolved.');
+  }
 }
 
 main().catch((err) => {
