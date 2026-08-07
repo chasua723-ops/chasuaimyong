@@ -50,4 +50,20 @@ describe('generateQuestions', () => {
     const sentPrompt = client.messages.create.mock.calls[0][0].messages[0].content;
     expect(sentPrompt).toContain('중국어로 출제');
   });
+
+  it('instructs Claude to decline table-of-contents/cover/colophon pages instead of quizzing on their structure', async () => {
+    // Reproduces a real failure: a random page landed on the table of contents, and Claude
+    // dutifully generated a "valid" JSON question asking about the ToC's own structure/layout
+    // instead of declining — a technically well-formed but useless question.
+    const client = fakeClientReturning('[]');
+
+    await generateQuestions(client, {
+      bookName: '전공중국어 문법',
+      pages: [{ pageNum: 2, content: '목차\n1장 ... 3\n2장 ... 15' }],
+      types: ['grammar'],
+    });
+
+    const sentSystem = client.messages.create.mock.calls[0][0].system;
+    expect(sentSystem).toContain('목차');
+  });
 });

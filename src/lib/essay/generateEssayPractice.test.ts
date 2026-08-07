@@ -8,6 +8,9 @@ vi.mock('../ai/generateQuestions', () => ({
     { type: 'essay', sourcePage: 5, prompt: '这篇课文的主题是什么？', correctAnswer: '' },
   ]),
 }));
+vi.mock('../ai/validateQuestion', () => ({
+  validateQuestion: vi.fn().mockResolvedValue({ valid: true, reason: 'ok' }),
+}));
 
 function baseTables(overrides: Partial<Record<string, any[]>> = {}) {
   return {

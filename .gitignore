@@ -43,6 +43,11 @@ next-env.d.ts
 
 # worktrees
 .worktrees/
+.claude/worktrees/
+
+# local Claude Code settings/config
+.claude/settings.local.json
+.claude/launch.json
 
 # superpowers scratch (brainstorm mockups, sdd workspaces)
 .superpowers/

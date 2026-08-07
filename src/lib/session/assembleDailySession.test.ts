@@ -12,6 +12,9 @@ vi.mock('../ai/generateQuestions', () => ({
     return [{ type: 'grammar', sourcePage: 3, prompt: 'q', correctAnswer: 'a' }];
   }),
 }));
+vi.mock('../ai/validateQuestion', () => ({
+  validateQuestion: vi.fn().mockResolvedValue({ valid: true, reason: 'ok' }),
+}));
 vi.mock('../ai/curateVocab', () => ({
   curateVocab: vi.fn().mockResolvedValue({
     wordZh: '内卷',

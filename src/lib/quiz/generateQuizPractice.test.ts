@@ -8,6 +8,9 @@ vi.mock('../ai/generateQuestions', () => ({
     { type: 'grammar', sourcePage: 5, prompt: '다음 중 옳은 것은?', choices: ['A', 'B'], correctAnswer: 'A' },
   ]),
 }));
+vi.mock('../ai/validateQuestion', () => ({
+  validateQuestion: vi.fn().mockResolvedValue({ valid: true, reason: 'ok' }),
+}));
 
 function baseTables(overrides: Partial<Record<string, any[]>> = {}) {
   return {

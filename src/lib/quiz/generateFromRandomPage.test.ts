@@ -2,11 +2,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { generateFromRandomPage } from './generateFromRandomPage';
 import { createMockSupabase } from '../../../tests/helpers/mockSupabase';
 import { generateQuestions } from '../ai/generateQuestions';
+import { validateQuestion } from '../ai/validateQuestion';
 
 vi.mock('../ai/generateQuestions', () => ({
   generateQuestions: vi.fn().mockResolvedValue([
     { type: 'grammar', sourcePage: 999, prompt: '다음 중 옳은 것은?', choices: ['A', 'B'], correctAnswer: 'A' },
   ]),
+}));
+vi.mock('../ai/validateQuestion', () => ({
+  validateQuestion: vi.fn().mockResolvedValue({ valid: true, reason: 'ok' }),
 }));
 
 function baseTables(overrides: Partial<Record<string, any[]>> = {}) {
@@ -113,6 +117,57 @@ describe('generateFromRandomPage', () => {
 
     expect(result.prompt).toBe('재시도 성공 문제');
     expect(result.sourcePage).toBe(10);
+    randomSpy.mockRestore();
+  });
+
+  it('retries on a different page when the generated correctAnswer is not among its own choices', async () => {
+    vi.mocked(generateQuestions)
+      .mockResolvedValueOnce([
+        { type: 'grammar', sourcePage: 1, prompt: '이상한 문제', choices: ['A', 'B'], correctAnswer: 'C' },
+      ])
+      .mockResolvedValueOnce([
+        { type: 'grammar', sourcePage: 10, prompt: '재시도 성공 문제', choices: ['A', 'B'], correctAnswer: 'A' },
+      ]);
+    const supabase = createMockSupabase(baseTables());
+    const randomSpy = vi.spyOn(Math, 'random');
+    randomSpy.mockReturnValueOnce(0.05); // -> page 1 (bad correctAnswer)
+    randomSpy.mockReturnValueOnce(0.95); // -> page 10 (succeeds)
+
+    const result = await generateFromRandomPage(supabase as any, {} as any, {
+      bookId: 'b1',
+      bookName: '전공중국어 문법',
+      maxPage: 10,
+      type: 'grammar',
+    });
+
+    expect(result.prompt).toBe('재시도 성공 문제');
+    randomSpy.mockRestore();
+  });
+
+  it('retries on a different page when validateQuestion judges the question invalid', async () => {
+    vi.mocked(generateQuestions)
+      .mockResolvedValueOnce([
+        { type: 'grammar', sourcePage: 1, prompt: '목차 구성 방식으로 옳은 것은?', choices: ['A', 'B'], correctAnswer: 'A' },
+      ])
+      .mockResolvedValueOnce([
+        { type: 'grammar', sourcePage: 10, prompt: '재시도 성공 문제', choices: ['A', 'B'], correctAnswer: 'A' },
+      ]);
+    vi.mocked(validateQuestion)
+      .mockResolvedValueOnce({ valid: false, reason: '목차 구조를 묻는 문제입니다.' })
+      .mockResolvedValueOnce({ valid: true, reason: 'ok' });
+    const supabase = createMockSupabase(baseTables());
+    const randomSpy = vi.spyOn(Math, 'random');
+    randomSpy.mockReturnValueOnce(0.05); // -> page 1 (fails validation)
+    randomSpy.mockReturnValueOnce(0.95); // -> page 10 (succeeds)
+
+    const result = await generateFromRandomPage(supabase as any, {} as any, {
+      bookId: 'b1',
+      bookName: '전공중국어 문법',
+      maxPage: 10,
+      type: 'grammar',
+    });
+
+    expect(result.prompt).toBe('재시도 성공 문제');
     randomSpy.mockRestore();
   });
 

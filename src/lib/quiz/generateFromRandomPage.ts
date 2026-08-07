@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type Anthropic from '@anthropic-ai/sdk';
 import type { QuestionType } from '@/types/db';
 import { generateQuestions, type GeneratedQuestion } from '../ai/generateQuestions';
+import { validateQuestion } from '../ai/validateQuestion';
 
 export interface GenerateFromRandomPageInput {
   bookId: string;
@@ -22,9 +23,13 @@ function randomPage(maxPage: number): number {
  * Picks a random page in [1, maxPage] and generates one question of `type` grounded in it.
  * A random page can land on front matter (title page, copyright, ISBN info) with no
  * teachable content — Claude then declines with prose instead of the requested JSON, which
- * generateQuestions surfaces as a thrown error. Retries with a fresh page (bounded attempts)
- * rather than failing on one unlucky draw, covering both a missing book_pages row and a
- * generateQuestions rejection.
+ * generateQuestions surfaces as a thrown error. A page like a table of contents can instead
+ * produce a technically well-formed but useless question (e.g. asking about the ToC's own
+ * layout), which doesn't throw on its own — so every generated question is also checked
+ * structurally (its correctAnswer must be one of its own choices) and reviewed by
+ * validateQuestion before being accepted. Any of these failure modes retries with a fresh
+ * page (bounded attempts) rather than failing — or returning a bad question — on one
+ * unlucky draw.
  */
 export async function generateFromRandomPage(
   supabase: SupabaseClient,
@@ -57,6 +62,21 @@ export async function generateFromRandomPage(
         types: [input.type],
         referenceExcerpts,
       });
+
+      if (generated.choices?.length && !generated.choices.includes(generated.correctAnswer)) {
+        lastError = new Error("Generated question's correctAnswer is not among its own choices");
+        continue;
+      }
+
+      const validation = await validateQuestion(aiClient, {
+        pageContent: page.content,
+        question: generated,
+      });
+      if (!validation.valid) {
+        lastError = new Error(`Generated question failed validation: ${validation.reason}`);
+        continue;
+      }
+
       // Trust the page we actually fed in, not Claude's self-reported sourcePage — we know
       // definitively which page this question came from since exactly one was provided.
       return { ...generated, sourcePage: page.page_num, usedReference: !!referenceExcerpts?.length };
