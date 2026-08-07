@@ -3,6 +3,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { calculateDailyRange } from '@/lib/pacing';
 import { calculateWeights, pickWeightedTypes, QUIZ_TYPES, type CategoryStat } from '@/lib/adaptive';
 import { generateQuestions } from '@/lib/ai/generateQuestions';
+import { generateFromRandomPage } from '@/lib/quiz/generateFromRandomPage';
 import { curateVocab } from '@/lib/ai/curateVocab';
 
 /** A question row built in memory, before a session id exists to attach it to. */
@@ -62,57 +63,48 @@ export async function assembleDailySession(
       currentPage: book.current_page,
     });
 
-    const { data: pages, error: pagesError } = await (supabase.from('book_pages') as any)
-      .select('page_num, content')
-      .eq('book_id', book.id)
-      .gte('page_num', range.startPage)
-      .lte('page_num', range.endPage);
-    if (pagesError) throw new Error(`Failed to fetch book pages: ${pagesError.message}`);
-
     const quizWeights = Object.fromEntries(
       QUIZ_TYPES.map((t) => [t, weights[t] ?? 0.5])
     ) as Record<(typeof QUIZ_TYPES)[number], number>;
     const types = pickWeightedTypes(quizWeights as any, QUESTIONS_PER_BOOK);
 
-    let referenceExcerpts: string[] | undefined;
-    if (types.includes('reading')) {
-      const { data: refs, error: refsError } = await (supabase.from('reference_materials') as any)
-        .select('content')
-        .ilike('name', '%독해%')
-        .limit(2);
-      if (refsError) throw new Error(`Failed to fetch reference materials: ${refsError.message}`);
-      referenceExcerpts = (refs ?? []).map((r: any) => r.content);
-    }
-
-    const pageRange = (pages ?? []).map((p: any) => ({ pageNum: p.page_num, content: p.content }));
-
-    const generated = await generateQuestions(aiClient, {
-      bookName: book.name,
-      pages: pageRange,
-      types,
-      referenceExcerpts,
-    });
-
-    // Claude sometimes returns a sourcePage outside the excerpt it was given.
-    // Persisting that would break the later book_pages lookup in
-    // recordAttempt/recordEssayAttempt, silently degrading the RAG grounding to
-    // an empty page while the UI still claims "(N페이지 참고)".
-    const clampPage = (page: number) =>
-      Math.min(Math.max(Number(page) || range.startPage, range.startPage), range.endPage);
-
-    for (const q of generated) {
+    // Quiz questions are sourced from the book's full range covered by today (1..endPage),
+    // not just today's assigned slice, so review of earlier material is mixed in for spaced
+    // retrieval practice. Each question gets its own independently random page.
+    for (const type of types) {
+      const generated = await generateFromRandomPage(supabase, aiClient, {
+        bookId: book.id,
+        bookName: book.name,
+        maxPage: Math.max(1, range.endPage),
+        type,
+      });
       pendingQuestions.push({
         book_id: book.id,
-        type: q.type,
-        source_page: clampPage(q.sourcePage),
-        prompt: q.prompt,
-        choices: q.choices ?? null,
-        correct_answer: q.correctAnswer,
-        used_reference: !!referenceExcerpts?.length,
+        type: generated.type,
+        source_page: generated.sourcePage,
+        prompt: generated.prompt,
+        choices: generated.choices ?? null,
+        correct_answer: generated.correctAnswer,
+        used_reference: generated.usedReference,
       });
     }
 
     if (book.id === essayBook.id) {
+      const { data: pages, error: pagesError } = await (supabase.from('book_pages') as any)
+        .select('page_num, content')
+        .eq('book_id', book.id)
+        .gte('page_num', range.startPage)
+        .lte('page_num', range.endPage);
+      if (pagesError) throw new Error(`Failed to fetch book pages: ${pagesError.message}`);
+      const pageRange = (pages ?? []).map((p: any) => ({ pageNum: p.page_num, content: p.content }));
+
+      // Claude sometimes returns a sourcePage outside the excerpt it was given.
+      // Persisting that would break the later book_pages lookup in recordEssayAttempt,
+      // silently degrading the RAG grounding to an empty page while the UI still claims
+      // "(N페이지 참고)".
+      const clampPage = (page: number) =>
+        Math.min(Math.max(Number(page) || range.startPage, range.startPage), range.endPage);
+
       const essayGenerated = await generateQuestions(aiClient, {
         bookName: book.name,
         pages: pageRange,
