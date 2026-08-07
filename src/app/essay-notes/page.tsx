@@ -108,8 +108,12 @@ export default function EssayNotesPage() {
       const result = await res.json();
       setPracticeFeedback(result);
       const notesRes = await fetch('/api/essay-notes');
-      const notesJson = await notesRes.json();
-      setNotes(notesJson.notes);
+      if (notesRes.ok) {
+        const notesJson = await notesRes.json();
+        setNotes(notesJson.notes);
+      } else {
+        console.error('Failed to refresh essay notes list:', notesRes.status);
+      }
     } finally {
       setGrading(false);
     }

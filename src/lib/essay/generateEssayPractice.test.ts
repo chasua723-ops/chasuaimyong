@@ -24,7 +24,11 @@ function baseTables(overrides: Partial<Record<string, any[]>> = {}) {
 
 describe('generateEssayPractice', () => {
   it('generates a new essay question from a page within the read range and stores it with no session', async () => {
-    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.4);
+    // 0.05 -> Math.floor(0.05 * 10) + 1 = page 1, which is present in book_pages.
+    // This deliberately differs from the AI's mocked sourcePage of 5, so the
+    // assertion below proves the inserted source_page comes from the page we
+    // actually fetched/sent to generateQuestions, not the AI's echoed value.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.05);
     const supabase = createMockSupabase(baseTables());
 
     const result = await generateEssayPractice(supabase as any, {} as any, { bookId: 'b1' });
@@ -35,6 +39,8 @@ describe('generateEssayPractice', () => {
       session_id: null,
       type: 'essay',
     });
+    expect(supabase.inserted.questions[0].source_page).toBe(1);
+    expect(result.sourcePage).toBe(1);
     randomSpy.mockRestore();
   });
 
@@ -49,6 +55,12 @@ describe('generateEssayPractice', () => {
     const result = await generateEssayPractice(supabase as any, {} as any, { bookId: 'b1' });
 
     expect(result.prompt).toBe('这篇课文的主题是什么？');
+    // The AI's mocked response claims sourcePage: 5, but the page actually
+    // fetched and passed to generateQuestions was page 10 (after the retry).
+    // The inserted source_page must reflect the real fetched page, not the
+    // AI's echoed value, so that the later book_pages lookup never misses.
+    expect(supabase.inserted.questions[0].source_page).toBe(10);
+    expect(result.sourcePage).toBe(10);
     randomSpy.mockRestore();
   });
 

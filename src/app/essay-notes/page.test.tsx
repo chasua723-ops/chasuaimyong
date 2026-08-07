@@ -3,12 +3,22 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EssayNotesPage from './page';
 
-function mockFetch(handlers: Record<string, () => any>) {
+function mockFetch(handlers: Record<string, (() => any) | (() => any)[]>) {
+  const callCounts: Record<string, number> = {};
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: any) => {
       const key = init?.method === 'POST' ? `POST ${url}` : url;
-      if (key in handlers) return handlers[key]();
+      if (key in handlers) {
+        const handler = handlers[key];
+        if (Array.isArray(handler)) {
+          const i = callCounts[key] ?? 0;
+          callCounts[key] = i + 1;
+          const fn = handler[Math.min(i, handler.length - 1)];
+          return fn();
+        }
+        return handler();
+      }
       throw new Error(`unhandled fetch: ${key}`);
     })
   );
@@ -155,5 +165,57 @@ describe('Essay notes page', () => {
 
     expect(screen.queryByText(/这篇课文的主题是什么/)).not.toBeInTheDocument();
     expect(screen.getByText('새 문제 풀기')).toBeInTheDocument();
+  });
+
+  it('keeps the just-graded feedback and the existing notes list visible when the post-submit refetch fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockFetch({
+      '/api/essay-notes': [
+        () => ({
+          ok: true,
+          json: async () => ({ notes: baseNotes, books: [{ id: 'b1', name: '문학개론' }] }),
+        }),
+        () => ({ ok: false, status: 500 }),
+      ],
+      'POST /api/essay-notes/new': () => ({
+        ok: true,
+        json: async () => ({ id: 'q-new', prompt: '这篇课文的主题是什么？', sourcePage: 12 }),
+      }),
+      'POST /api/attempts/essay': () => ({
+        ok: true,
+        json: async () => ({
+          conceptScore: 4,
+          conceptChecklist: [
+            { concept: 'A', covered: true },
+            { concept: 'B', covered: true },
+            { concept: 'C', covered: true },
+            { concept: 'D', covered: true },
+          ],
+          grammarCorrections: [],
+        }),
+      }),
+    });
+
+    render(<EssayNotesPage />);
+    await screen.findByText(/鲁迅文学的特点是什么/);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('새 문제 풀기'));
+    await user.click(await screen.findByRole('button', { name: '문학개론' }));
+    await screen.findByText(/这篇课文的主题是什么/);
+
+    const koreanBox = screen.getByLabelText(/1단계/);
+    const chineseBox = screen.getByLabelText(/2단계/);
+    await user.type(koreanBox, '내용 요약');
+    await user.type(chineseBox, '答案内容');
+    await user.click(screen.getByText('제출'));
+
+    // The refetch after grading fails, but the grade we just received must
+    // stay visible and the page must not fall back to a loading/blank state.
+    await waitFor(() => expect(screen.getByText('4/4점')).toBeInTheDocument());
+    expect(screen.getByText(/鲁迅文学的特点是什么/)).toBeInTheDocument();
+    expect(consoleError).toHaveBeenCalled();
+
+    consoleError.mockRestore();
   });
 });

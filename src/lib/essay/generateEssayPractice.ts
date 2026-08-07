@@ -52,7 +52,10 @@ export async function generateEssayPractice(
       book_id: input.bookId,
       session_id: null,
       type: 'essay',
-      source_page: generated.sourcePage,
+      // Always use the page we actually fetched and sent to generateQuestions,
+      // never the AI's echoed sourcePage: a page outside what it was shown
+      // would silently break the later book_pages lookup in recordEssayAttempt.
+      source_page: page.page_num,
       prompt: generated.prompt,
       choices: null,
       correct_answer: generated.correctAnswer,

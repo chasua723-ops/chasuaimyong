@@ -14,8 +14,14 @@ export interface EssayNote {
 }
 
 export async function getEssayNotes(supabase: SupabaseClient): Promise<EssayNote[]> {
-  const { data: attempts } = await (supabase.from('attempts') as any).select('*');
-  const { data: questions } = await (supabase.from('questions') as any).select('*');
+  const { data: attempts } = await (supabase.from('attempts') as any)
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(5000);
+  const { data: questions } = await (supabase.from('questions') as any)
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(5000);
   const { data: books } = await (supabase.from('books') as any).select('*');
 
   const questionById = new Map<string, any>((questions ?? []).map((q: any) => [q.id, q]));
