@@ -21,7 +21,9 @@ export async function explainAnswer(client: Anthropic, input: ExplainInput): Pro
     `설명은 3문장 이내로, 반드시 위 교재 내용에 근거해서 작성하세요.`;
 
   return askClaude(client, prompt, {
-    system: '당신은 중등 임용고시 중국어 과목 튜터입니다.',
+    system:
+      '당신은 중등 임용고시 중국어 과목 튜터입니다. ' +
+      '중국어 표현을 인용할 때는 반드시 간체자(简体字)로만 작성하세요. 번체자(繁體字)는 절대 사용하지 마세요.',
     maxTokens: 300,
   });
 }

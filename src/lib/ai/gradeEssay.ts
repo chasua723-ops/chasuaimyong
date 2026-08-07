@@ -29,7 +29,9 @@ export async function gradeEssay(client: Anthropic, input: EssayGradeInput): Pro
     `contentScore는 교재 내용과 비교한 정확도, chineseScore는 중국어 표현의 정확성과 자연스러움을 평가하세요.`;
 
   const raw = await askClaude(client, prompt, {
-    system: '당신은 중등 임용고시 중국어 서술형 채점관입니다. 반드시 주어진 교재 내용에 근거해 채점하세요.',
+    system:
+      '당신은 중등 임용고시 중국어 서술형 채점관입니다. 반드시 주어진 교재 내용에 근거해 채점하세요. ' +
+      '중국어 예문이나 표현을 인용할 때는 반드시 간체자(简体字)로만 작성하세요. 번체자(繁體字)는 절대 사용하지 마세요.',
     maxTokens: 1024,
   });
 

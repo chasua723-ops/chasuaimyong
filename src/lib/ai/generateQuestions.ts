@@ -35,7 +35,8 @@ export async function generateQuestions(
 
   const raw = await askClaude(client, prompt, {
     system:
-      '당신은 중등 임용고시 중국어 과목 출제 위원입니다. 반드시 주어진 교재 내용에만 근거해 문제를 냅니다.',
+      '당신은 중등 임용고시 중국어 과목 출제 위원입니다. 반드시 주어진 교재 내용에만 근거해 문제를 냅니다. ' +
+      '중국어 텍스트는 반드시 간체자(简体字)로만 작성하세요. 번체자(繁體字)는 절대 사용하지 마세요.',
     maxTokens: 2048,
   });
 
