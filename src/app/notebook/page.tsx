@@ -75,15 +75,18 @@ export default function NotebookPage() {
       {groups.length === 0 && <p className={styles.empty}>아직 오답이 없어요 🎉</p>}
 
       {groups.map((group) => {
+        const liveOutstandingCount = group.questions.filter(
+          (q) => !(overcomeOverrides[q.id] ?? q.overcome)
+        ).length;
         const percentage =
-          group.totalCount === 0 ? 0 : Math.round((group.outstandingCount / group.totalCount) * 100);
+          group.totalCount === 0 ? 0 : Math.round((liveOutstandingCount / group.totalCount) * 100);
 
         return (
           <section key={group.type} className={styles.group}>
             <div className={styles.groupHeader}>
               <span className={styles.groupLabel}>{group.label}</span>
               <span className={styles.groupStat}>
-                {group.outstandingCount}/{group.totalCount} 미해결 ({percentage}%)
+                {liveOutstandingCount}/{group.totalCount} 미해결 ({percentage}%)
               </span>
             </div>
 
@@ -102,7 +105,7 @@ export default function NotebookPage() {
                 feedback={feedback[q.id]}
                 onSubmit={submitAnswer}
                 overcome={overcomeOverrides[q.id] ?? q.overcome}
-                attemptCount={q.attemptCount}
+                attemptCount={overcomeOverrides[q.id] ? q.attemptCount + 1 : q.attemptCount}
               />
             ))}
           </section>

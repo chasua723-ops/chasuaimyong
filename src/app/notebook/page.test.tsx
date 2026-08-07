@@ -83,6 +83,29 @@ describe('Notebook page', () => {
     await waitFor(() => expect(screen.getByText('정답입니다')).toBeInTheDocument());
   });
 
+  it('shows attemptCount as original + 1 after a correct retry, not the stale original count', async () => {
+    render(<NotebookPage />);
+
+    await screen.findByText(/이 글의 주제로 가장 적절한 것은/);
+    const user = userEvent.setup();
+    // q1 starts with attemptCount: 1 and is not yet overcome.
+    await user.click(screen.getAllByText('A')[0]);
+
+    await waitFor(() => expect(screen.getByText('2번 시도 만에 정답')).toBeInTheDocument());
+  });
+
+  it('updates the group header outstanding count after a correct retry', async () => {
+    render(<NotebookPage />);
+
+    await screen.findByText(/이 글의 주제로 가장 적절한 것은/);
+    expect(screen.getByText('1/2 미해결 (50%)')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getAllByText('A')[0]);
+
+    await waitFor(() => expect(screen.getByText('0/2 미해결 (0%)')).toBeInTheDocument());
+  });
+
   it('shows an empty state when there are no wrong-note groups', async () => {
     mockFetch({
       '/api/notebook': () => ({ ok: true, json: async () => ({ groups: [] }) }),

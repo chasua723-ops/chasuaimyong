@@ -28,8 +28,14 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export async function getWrongNotes(supabase: SupabaseClient): Promise<WrongNoteGroup[]> {
-  const { data: questions } = await (supabase.from('questions') as any).select('*');
-  const { data: attempts } = await (supabase.from('attempts') as any).select('*');
+  const { data: questions } = await (supabase.from('questions') as any)
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(5000);
+  const { data: attempts } = await (supabase.from('attempts') as any)
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(5000);
   const { data: books } = await (supabase.from('books') as any).select('*');
 
   const bookNameById = new Map<string, string>((books ?? []).map((b: any) => [b.id, b.name]));
