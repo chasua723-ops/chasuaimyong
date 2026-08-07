@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Anthropic from '@anthropic-ai/sdk';
 import { calculateDailyRange } from '@/lib/pacing';
-import { calculateWeights, pickWeightedTypes, type CategoryStat } from '@/lib/adaptive';
+import { calculateWeights, pickWeightedTypes, QUIZ_TYPES, type CategoryStat } from '@/lib/adaptive';
 import { generateQuestions } from '@/lib/ai/generateQuestions';
 import { curateVocab } from '@/lib/ai/curateVocab';
 
@@ -17,7 +17,6 @@ interface PendingQuestion {
 }
 
 const QUESTIONS_PER_BOOK = 3;
-const QUIZ_TYPES = ['grammar', 'vocab', 'reading', 'theory'] as const;
 
 export async function assembleDailySession(
   supabase: SupabaseClient,

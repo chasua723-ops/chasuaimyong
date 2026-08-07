@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateWeights, pickWeightedTypes, type CategoryStat } from './adaptive';
+import { calculateWeights, pickWeightedTypes, QUIZ_TYPES, type CategoryStat } from './adaptive';
 
 describe('calculateWeights', () => {
   it('gives higher weight to categories with lower accuracy', () => {
@@ -43,5 +43,11 @@ describe('pickWeightedTypes', () => {
       () => 0.99
     );
     expect(picks).toHaveLength(5);
+  });
+});
+
+describe('QUIZ_TYPES', () => {
+  it('exports the four quiz question types in a fixed order', () => {
+    expect(QUIZ_TYPES).toEqual(['grammar', 'vocab', 'reading', 'theory']);
   });
 });

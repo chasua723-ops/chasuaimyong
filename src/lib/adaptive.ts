@@ -6,6 +6,8 @@ export interface CategoryStat {
   totalCount: number;
 }
 
+export const QUIZ_TYPES = ['grammar', 'vocab', 'reading', 'theory'] as const;
+
 export function calculateWeights(stats: CategoryStat[]): Record<QuestionType, number> {
   const weights = {} as Record<QuestionType, number>;
   for (const stat of stats) {
