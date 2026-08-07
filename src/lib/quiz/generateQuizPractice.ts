@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type Anthropic from '@anthropic-ai/sdk';
 import type { QuestionType } from '@/types/db';
 import { calculateWeights, pickWeightedTypes, QUIZ_TYPES, type CategoryStat } from '../adaptive';
-import { generateQuestions } from '../ai/generateQuestions';
+import { generateFromRandomPage } from './generateFromRandomPage';
 
 export interface GenerateQuizPracticeInput {
   bookId: string;
@@ -14,10 +14,6 @@ export interface QuizPracticeQuestion {
   prompt: string;
   choices: string[] | null;
   sourcePage: number;
-}
-
-function randomPage(maxPage: number): number {
-  return Math.floor(Math.random() * maxPage) + 1;
 }
 
 export async function generateQuizPractice(
@@ -43,49 +39,12 @@ export async function generateQuizPractice(
   ) as Record<(typeof QUIZ_TYPES)[number], number>;
   const [type] = pickWeightedTypes(quizWeights as any, 1);
 
-  const maxPage = Math.max(1, book.current_page);
-
-  let referenceExcerpts: string[] | undefined;
-  if (type === 'reading') {
-    const { data: refs } = await (supabase.from('reference_materials') as any)
-      .select('content')
-      .ilike('name', '%독해%')
-      .limit(2);
-    referenceExcerpts = (refs ?? []).map((r: any) => r.content);
-  }
-
-  // A random page in [1, current_page] can land on front matter (title page, copyright,
-  // ISBN info) with no teachable content — Claude then declines with prose instead of the
-  // requested JSON, which generateQuestions surfaces as a thrown error. Retry with a fresh
-  // page rather than failing the whole request on one unlucky draw.
-  let generated: Awaited<ReturnType<typeof generateQuestions>>[number] | undefined;
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 3 && !generated; attempt++) {
-    const pageNum = randomPage(maxPage);
-    const { data: page } = await (supabase.from('book_pages') as any)
-      .select('page_num, content')
-      .eq('book_id', input.bookId)
-      .eq('page_num', pageNum)
-      .maybeSingle();
-    if (!page) continue;
-
-    try {
-      const [result] = await generateQuestions(aiClient, {
-        bookName: book.name,
-        pages: [{ pageNum: page.page_num, content: page.content }],
-        types: [type],
-        referenceExcerpts,
-      });
-      generated = result;
-    } catch (err) {
-      lastError = err;
-    }
-  }
-  if (!generated) {
-    throw lastError instanceof Error
-      ? lastError
-      : new Error('No page content found for quiz practice');
-  }
+  const generated = await generateFromRandomPage(supabase, aiClient, {
+    bookId: input.bookId,
+    bookName: book.name,
+    maxPage: Math.max(1, book.current_page),
+    type,
+  });
 
   const { data: inserted, error } = await (supabase.from('questions') as any)
     .insert({
@@ -96,7 +55,7 @@ export async function generateQuizPractice(
       prompt: generated.prompt,
       choices: generated.choices ?? null,
       correct_answer: generated.correctAnswer,
-      used_reference: !!referenceExcerpts?.length,
+      used_reference: generated.usedReference,
     })
     .select()
     .single();
