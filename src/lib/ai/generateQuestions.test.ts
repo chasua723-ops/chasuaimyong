@@ -37,4 +37,17 @@ describe('generateQuestions', () => {
     expect(sentPrompt).toContain('[p.5]');
     expect(sentPrompt).toContain('기출 예시 문제');
   });
+
+  it('instructs the essay prompt to be written in Chinese when essay is among the requested types', async () => {
+    const client = fakeClientReturning('[]');
+
+    await generateQuestions(client, {
+      bookName: '전공중국어 문학개론',
+      pages: [{ pageNum: 30, content: '내용' }],
+      types: ['essay'],
+    });
+
+    const sentPrompt = client.messages.create.mock.calls[0][0].messages[0].content;
+    expect(sentPrompt).toContain('중국어로 출제');
+  });
 });
