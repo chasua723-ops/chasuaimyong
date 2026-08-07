@@ -15,7 +15,7 @@ function drawIcon(size) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = `${Math.round(size * 0.58)}px "Microsoft YaHei", "PingFang SC", sans-serif`;
-  ctx.fillText('中', size / 2, size * 0.56);
+  ctx.fillText('中', size / 2, size / 2);
 
   return canvas.toBuffer('image/png');
 }
