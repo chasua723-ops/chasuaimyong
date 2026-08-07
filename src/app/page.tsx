@@ -84,6 +84,7 @@ export default function Page() {
         return (
           <BookSection
             key={range.bookId}
+            bookId={range.bookId}
             name={range.name}
             startPage={range.startPage}
             endPage={range.endPage}

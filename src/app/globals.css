@@ -17,6 +17,9 @@
   --essay-notes-accent: #7c6bb0;
   --essay-notes-accent-bg: #f0eef8;
   --essay-notes-accent-text: #4f4380;
+  --quiz-practice-accent: #3b73b9;
+  --quiz-practice-accent-bg: #e8f0fa;
+  --quiz-practice-accent-text: #1f4d80;
 }
 
 html {

@@ -1,6 +1,7 @@
 // src/app/components/BookSection.test.tsx
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import BookSection from './BookSection';
 import type { Question } from './types';
 
@@ -29,6 +30,7 @@ describe('BookSection', () => {
   it('renders the book icon, name, and page range', () => {
     render(
       <BookSection
+        bookId="b1"
         name="문법"
         startPage={11}
         endPage={19}
@@ -50,6 +52,7 @@ describe('BookSection', () => {
   it('numbers quiz questions starting from 1 within the section', () => {
     render(
       <BookSection
+        bookId="b1"
         name="문법"
         startPage={11}
         endPage={19}
@@ -70,6 +73,7 @@ describe('BookSection', () => {
   it('falls back to a default icon for an unrecognized book name', () => {
     render(
       <BookSection
+        bookId="b1"
         name="새교재"
         startPage={1}
         endPage={5}
@@ -89,6 +93,7 @@ describe('BookSection', () => {
   it('renders the essay question only when one is provided', () => {
     render(
       <BookSection
+        bookId="b1"
         name="문학개론"
         startPage={8}
         endPage={14}
@@ -104,5 +109,100 @@ describe('BookSection', () => {
 
     expect(screen.getByText('서술형')).toBeInTheDocument();
     expect(screen.getByText('서술형 문제')).toBeInTheDocument();
+  });
+
+  it('always shows a "더 풀기" button, even before finishing the daily questions', () => {
+    render(
+      <BookSection
+        bookId="b1"
+        name="문법"
+        startPage={11}
+        endPage={19}
+        quizQuestions={quizQuestions}
+        essayQuestion={undefined}
+        quizFeedback={{}}
+        koreanDraft=""
+        chineseAnswer=""
+        essayFeedback={undefined}
+        {...noop}
+      />
+    );
+
+    expect(screen.getByText('더 풀기')).toBeInTheDocument();
+  });
+
+  it('generates and renders a new practice question when "더 풀기" is clicked', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'p1', type: 'grammar', prompt: '연습 문제', choices: ['X', 'Y'], sourcePage: 7 }),
+    }) as any;
+
+    render(
+      <BookSection
+        bookId="b1"
+        name="문법"
+        startPage={11}
+        endPage={19}
+        quizQuestions={[]}
+        essayQuestion={undefined}
+        quizFeedback={{}}
+        koreanDraft=""
+        chineseAnswer=""
+        essayFeedback={undefined}
+        {...noop}
+      />
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('더 풀기'));
+
+    expect(await screen.findByText(/연습 문제/)).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/quiz-practice/new',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ bookId: 'b1' }) })
+    );
+  });
+
+  it('submits a practice answer to /api/attempts and shows feedback', async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'p1', type: 'grammar', prompt: '연습 문제', choices: ['X', 'Y'], sourcePage: 7 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ isCorrect: true }),
+      }) as any;
+
+    render(
+      <BookSection
+        bookId="b1"
+        name="문법"
+        startPage={11}
+        endPage={19}
+        quizQuestions={[]}
+        essayQuestion={undefined}
+        quizFeedback={{}}
+        koreanDraft=""
+        chineseAnswer=""
+        essayFeedback={undefined}
+        {...noop}
+      />
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('더 풀기'));
+    await screen.findByText(/연습 문제/);
+    await user.click(screen.getByText('X'));
+
+    expect(await screen.findByText('정답입니다')).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenLastCalledWith(
+      '/api/attempts',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ questionId: 'p1', userAnswer: 'X' }),
+      })
+    );
   });
 });
