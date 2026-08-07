@@ -20,18 +20,21 @@ async function handleGet() {
 
   const session = await assembleDailySession(supabase, getAnthropicClient(), today);
 
-  const { data: questions } = await supabase
+  const { data: questions, error: questionsError } = await supabase
     .from('questions')
     .select('*')
     .eq('session_id', session.id);
+  if (questionsError) throw new Error(`Failed to fetch questions: ${questionsError.message}`);
 
-  const { data: vocab } = await supabase
+  const { data: vocab, error: vocabError } = await supabase
     .from('vocab_of_the_day')
     .select('*')
     .eq('date', today)
     .maybeSingle();
+  if (vocabError) throw new Error(`Failed to fetch vocab of the day: ${vocabError.message}`);
 
-  const { data: books } = await supabase.from('books').select('*');
+  const { data: books, error: booksError } = await supabase.from('books').select('*');
+  if (booksError) throw new Error(`Failed to fetch books: ${booksError.message}`);
   const bookRanges = (books ?? []).map((b: any) => {
     const range = calculateDailyRange({
       totalPages: b.total_pages,

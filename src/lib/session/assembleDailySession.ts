@@ -24,17 +24,20 @@ export async function assembleDailySession(
   aiClient: Anthropic,
   today: string
 ) {
-  const { data: existing } = await (supabase.from('daily_sessions') as any)
+  const { data: existing, error: existingError } = await (supabase.from('daily_sessions') as any)
     .select('*')
     .eq('date', today)
     .maybeSingle();
+  if (existingError) throw new Error(`Failed to fetch daily session: ${existingError.message}`);
 
   if (existing) return existing;
 
-  const { data: books } = await (supabase.from('books') as any).select('*');
+  const { data: books, error: booksError } = await (supabase.from('books') as any).select('*');
+  if (booksError) throw new Error(`Failed to fetch books: ${booksError.message}`);
   if (!books || books.length === 0) throw new Error('No books found');
 
-  const { data: statsRows } = await (supabase.from('category_stats') as any).select('*');
+  const { data: statsRows, error: statsError } = await (supabase.from('category_stats') as any).select('*');
+  if (statsError) throw new Error(`Failed to fetch category stats: ${statsError.message}`);
   const stats: CategoryStat[] = (statsRows ?? []).map((r: any) => ({
     type: r.type,
     correctCount: r.correct_count,
@@ -60,11 +63,12 @@ export async function assembleDailySession(
       currentPage: book.current_page,
     });
 
-    const { data: pages } = await (supabase.from('book_pages') as any)
+    const { data: pages, error: pagesError } = await (supabase.from('book_pages') as any)
       .select('page_num, content')
       .eq('book_id', book.id)
       .gte('page_num', range.startPage)
       .lte('page_num', range.endPage);
+    if (pagesError) throw new Error(`Failed to fetch book pages: ${pagesError.message}`);
 
     const quizWeights = Object.fromEntries(
       QUIZ_TYPES.map((t) => [t, weights[t] ?? 0.5])
@@ -73,10 +77,11 @@ export async function assembleDailySession(
 
     let referenceExcerpts: string[] | undefined;
     if (types.includes('reading')) {
-      const { data: refs } = await (supabase.from('reference_materials') as any)
+      const { data: refs, error: refsError } = await (supabase.from('reference_materials') as any)
         .select('content')
         .ilike('name', '%독해%')
         .limit(2);
+      if (refsError) throw new Error(`Failed to fetch reference materials: ${refsError.message}`);
       referenceExcerpts = (refs ?? []).map((r: any) => r.content);
     }
 
@@ -128,14 +133,16 @@ export async function assembleDailySession(
     }
   }
 
-  const { data: existingVocab } = await (supabase.from('vocab_of_the_day') as any)
+  const { data: existingVocab, error: existingVocabError } = await (supabase.from('vocab_of_the_day') as any)
     .select('*')
     .eq('date', today)
     .maybeSingle();
+  if (existingVocabError) throw new Error(`Failed to fetch vocab of the day: ${existingVocabError.message}`);
 
   let pendingVocab: Record<string, unknown> | null = null;
   if (!existingVocab) {
-    const { data: pastVocab } = await (supabase.from('vocab_of_the_day') as any).select('word_zh');
+    const { data: pastVocab, error: pastVocabError } = await (supabase.from('vocab_of_the_day') as any).select('word_zh');
+    if (pastVocabError) throw new Error(`Failed to fetch past vocab: ${pastVocabError.message}`);
     const vocab = await curateVocab(aiClient, (pastVocab ?? []).map((v: any) => v.word_zh));
     pendingVocab = {
       date: today,
