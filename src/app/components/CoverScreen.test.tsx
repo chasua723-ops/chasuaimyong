@@ -41,4 +41,11 @@ describe('CoverScreen', () => {
     const link = screen.getByText('서술형 노트').closest('a');
     expect(link).toHaveAttribute('href', '/essay-notes');
   });
+
+  it('links to the quiz practice record via a third binder tab', () => {
+    render(<CoverScreen bookRanges={bookRanges} onStart={vi.fn()} />);
+
+    const link = screen.getByText('더 풀기 기록').closest('a');
+    expect(link).toHaveAttribute('href', '/quiz-practice');
+  });
 });

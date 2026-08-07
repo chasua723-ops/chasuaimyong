@@ -41,6 +41,9 @@ export default function CoverScreen({ bookRanges, onStart }: CoverScreenProps) {
         <Link href="/essay-notes" className={styles.essayNotesTab}>
           서술형 노트
         </Link>
+        <Link href="/quiz-practice" className={styles.quizPracticeTab}>
+          더 풀기 기록
+        </Link>
       </div>
     </div>
   );

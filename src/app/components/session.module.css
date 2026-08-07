@@ -85,6 +85,20 @@
   box-sizing: content-box;
   background: var(--essay-notes-accent);
   color: #ffffff;
+  border-radius: 0;
+  padding: 14px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  writing-mode: vertical-rl;
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+.quizPracticeTab {
+  display: block;
+  box-sizing: content-box;
+  background: var(--quiz-practice-accent);
+  color: #ffffff;
   border-radius: 0 0 8px 0;
   padding: 14px 6px;
   font-size: 12px;
