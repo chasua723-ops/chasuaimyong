@@ -67,6 +67,8 @@
 }
 
 .notebookTab {
+  display: block;
+  box-sizing: content-box;
   background: var(--notebook-accent);
   color: #ffffff;
   border-radius: 0 8px 0 0;
@@ -75,9 +77,12 @@
   font-weight: 600;
   writing-mode: vertical-rl;
   letter-spacing: 2px;
+  white-space: nowrap;
 }
 
 .essayNotesTab {
+  display: block;
+  box-sizing: content-box;
   background: var(--essay-notes-accent);
   color: #ffffff;
   border-radius: 0 0 8px 0;
@@ -86,6 +91,7 @@
   font-weight: 600;
   writing-mode: vertical-rl;
   letter-spacing: 2px;
+  white-space: nowrap;
 }
 
 /* 교재 섹션 */
