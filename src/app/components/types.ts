@@ -30,8 +30,19 @@ export interface SessionData {
 
 export type QuizFeedback = 'correct' | { explanation: string; sourcePage: number };
 
+export interface ConceptCheck {
+  concept: string;
+  covered: boolean;
+}
+
+export interface GrammarCorrection {
+  original: string;
+  corrected: string;
+  explanation: string;
+}
+
 export interface EssayFeedback {
-  contentScore: number;
-  chineseScore: number;
-  feedback: string;
+  conceptScore: number;
+  conceptChecklist: ConceptCheck[];
+  grammarCorrections: GrammarCorrection[];
 }

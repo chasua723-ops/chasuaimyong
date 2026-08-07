@@ -55,9 +55,28 @@ export default function EssayQuestion({
       </button>
 
       {feedback && (
-        <p className={styles.essayFeedback}>
-          내용 정확도 {feedback.contentScore}점 / 중국어 표현 {feedback.chineseScore}점 — {feedback.feedback}
-        </p>
+        <div className={styles.essayFeedback}>
+          <p className={styles.essayScoreLine}>{feedback.conceptScore}/4점</p>
+          <ul className={styles.conceptChecklist}>
+            {feedback.conceptChecklist.map((c, i) => (
+              <li key={i} className={c.covered ? styles.conceptCovered : styles.conceptMissing}>
+                {c.covered ? '✓' : '✗'} {c.concept}
+              </li>
+            ))}
+          </ul>
+          {feedback.grammarCorrections.length > 0 && (
+            <ul className={styles.grammarList}>
+              {feedback.grammarCorrections.map((g, i) => (
+                <li key={i} className={styles.grammarItem}>
+                  <span className={`${styles.grammarOriginal} zh`}>{g.original}</span>
+                  <span className={styles.grammarArrow}>→</span>
+                  <span className={`${styles.grammarCorrected} zh`}>{g.corrected}</span>
+                  <p className={styles.grammarExplanation}>{g.explanation}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );

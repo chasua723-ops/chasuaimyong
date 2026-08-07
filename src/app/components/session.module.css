@@ -248,6 +248,69 @@
   font-size: 12px;
 }
 
+.essayScoreLine {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.conceptChecklist {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.conceptCovered {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.conceptMissing {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.grammarList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grammarItem {
+  background: var(--background);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.grammarOriginal {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-decoration: line-through;
+}
+
+.grammarArrow {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 6px;
+}
+
+.grammarCorrected {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.grammarExplanation {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
 /* 오늘의 어휘 */
 .vocabCard {
   background: var(--vocab-background);
