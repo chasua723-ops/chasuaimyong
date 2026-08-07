@@ -35,7 +35,7 @@ export default function QuizPracticePage() {
         if (!cancelled) setNotes(json.notes);
       } catch (err) {
         console.error(err);
-        if (!cancelled) setError('더 풀기 기록을 불러오지 못했어요. 새로고침 해주세요.');
+        if (!cancelled) setError('더 풀기를 불러오지 못했어요. 새로고침 해주세요.');
       }
     })();
     return () => {
@@ -48,7 +48,7 @@ export default function QuizPracticePage() {
 
   return (
     <main className={styles.page}>
-      <h1 className={styles.title}>더 풀기 기록</h1>
+      <h1 className={styles.title}>더 풀기</h1>
 
       {notes.length === 0 && <p className={styles.empty}>아직 더 풀기로 만든 문제가 없어요.</p>}
       {notes.map((note) => (

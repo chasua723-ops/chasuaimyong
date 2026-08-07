@@ -47,6 +47,6 @@ describe('QuizPracticePage', () => {
 
     render(<QuizPracticePage />);
 
-    expect(await screen.findByText('더 풀기 기록을 불러오지 못했어요. 새로고침 해주세요.')).toBeInTheDocument();
+    expect(await screen.findByText('더 풀기를 불러오지 못했어요. 새로고침 해주세요.')).toBeInTheDocument();
   });
 });

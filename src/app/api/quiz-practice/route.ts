@@ -9,6 +9,6 @@ export async function GET() {
     return NextResponse.json({ notes });
   } catch (err) {
     console.error('[GET /api/quiz-practice] failed:', err);
-    return NextResponse.json({ error: '더 풀기 기록을 불러오지 못했어요' }, { status: 500 });
+    return NextResponse.json({ error: '더 풀기를 불러오지 못했어요' }, { status: 500 });
   }
 }
