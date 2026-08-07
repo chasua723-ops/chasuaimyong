@@ -11,6 +11,12 @@
   --badge-background: #e9f5f3;
   --vocab-background: #fbf6ec;
   --vocab-border: #eee0c8;
+  --notebook-accent: #f4832b;
+  --notebook-accent-bg: #fef1e2;
+  --notebook-accent-text: #b5590a;
+  --essay-notes-accent: #7c6bb0;
+  --essay-notes-accent-bg: #f0eef8;
+  --essay-notes-accent-text: #4f4380;
 }
 
 html {
@@ -43,4 +49,8 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+.zh {
+  font-family: 'Noto Sans SC', sans-serif;
 }

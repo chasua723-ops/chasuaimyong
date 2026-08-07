@@ -42,9 +42,9 @@ export async function recordEssayAttempt(
     question_id: question.id,
     korean_draft: input.koreanDraft,
     chinese_answer: input.chineseAnswer,
-    content_score: grade.contentScore,
-    chinese_score: grade.chineseScore,
-    ai_feedback: grade.feedback,
+    concept_score: grade.conceptScore,
+    concept_checklist: grade.conceptChecklist,
+    grammar_corrections: grade.grammarCorrections,
   });
   if (attemptError) throw new Error(`Failed to insert essay attempt: ${attemptError.message}`);
 

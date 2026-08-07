@@ -43,6 +43,17 @@ export interface QuestionRow {
   used_reference: boolean;
 }
 
+export interface ConceptCheck {
+  concept: string;
+  covered: boolean;
+}
+
+export interface GrammarCorrection {
+  original: string;
+  corrected: string;
+  explanation: string;
+}
+
 export interface AttemptRow {
   id: string;
   question_id: string;
@@ -54,6 +65,9 @@ export interface AttemptRow {
   content_score: number | null;
   chinese_score: number | null;
   ai_feedback: string | null;
+  concept_score: number | null;
+  concept_checklist: ConceptCheck[] | null;
+  grammar_corrections: GrammarCorrection[] | null;
 }
 
 export interface CategoryStatRow {

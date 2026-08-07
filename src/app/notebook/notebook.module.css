@@ -1,0 +1,44 @@
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.empty {
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.group {
+  margin-bottom: 28px;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.groupLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.groupStat {
+  font-size: 11px;
+  color: var(--notebook-accent-text);
+  background: var(--notebook-accent-bg);
+  padding: 2px 9px;
+  border-radius: 999px;
+}

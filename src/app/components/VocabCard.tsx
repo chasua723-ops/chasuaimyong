@@ -9,7 +9,7 @@ export default function VocabCard({ vocab }: { vocab: Vocab }) {
         <span className={styles.vocabBadge}>AI 큐레이션</span>
       </div>
       <p className={styles.vocabWord}>
-        <strong>{vocab.word_zh}</strong> ({vocab.pinyin}) — {vocab.meaning_ko}
+        <strong className="zh">{vocab.word_zh}</strong> ({vocab.pinyin}) — {vocab.meaning_ko}
       </p>
     </section>
   );

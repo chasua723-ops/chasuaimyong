@@ -41,7 +41,16 @@ beforeEach(() => {
       if (url === '/api/attempts/essay') {
         return {
           ok: true,
-          json: async () => ({ contentScore: 75, chineseScore: 55, feedback: '표현 개선 필요' }),
+          json: async () => ({
+            conceptScore: 3,
+            conceptChecklist: [
+              { concept: '루쉰의 사실주의 기법', covered: true },
+              { concept: '광인일기의 상징', covered: false },
+              { concept: '봉건 사회 비판', covered: true },
+              { concept: '백화문 사용', covered: true },
+            ],
+            grammarCorrections: [],
+          }),
         } as any;
       }
       throw new Error(`unhandled fetch: ${url}`);
@@ -80,7 +89,7 @@ describe('Daily session page', () => {
     expect(screen.getByText(/12페이지 참고/)).toBeInTheDocument();
   });
 
-  it('submits the two-stage essay answer and shows separate content/Chinese scores', async () => {
+  it('submits the two-stage essay answer and shows the concept checklist score', async () => {
     render(<Page />);
 
     const user = userEvent.setup();
@@ -92,9 +101,8 @@ describe('Daily session page', () => {
     await user.type(chineseBox, '鲁迅用现实主义手法...');
     await user.click(screen.getByText('제출'));
 
-    await waitFor(() => expect(screen.getByText(/75점/)).toBeInTheDocument());
-    expect(screen.getByText(/55점/)).toBeInTheDocument();
-    expect(screen.getByText(/표현 개선 필요/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('3/4점')).toBeInTheDocument());
+    expect(screen.getByText(/루쉰의 사실주의 기법/)).toBeInTheDocument();
   });
 
   it('shows the AI-curated vocab of the day labeled as AI content, after starting', async () => {

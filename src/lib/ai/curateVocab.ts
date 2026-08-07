@@ -17,7 +17,9 @@ export async function curateVocab(client: Anthropic, excludeWords: string[]): Pr
     `{"wordZh":"...","pinyin":"...","meaningKo":"...","exampleZh":"...","exampleKo":"..."}`;
 
   const raw = await askClaude(client, prompt, {
-    system: '당신은 중국어 임용고시 출제 경향에 정통한 어휘 큐레이터입니다.',
+    system:
+      '당신은 중국어 임용고시 출제 경향에 정통한 어휘 큐레이터입니다. ' +
+      '중국어 단어와 예문은 반드시 간체자(简体字)로만 작성하세요. 번체자(繁體字)는 절대 사용하지 마세요.',
     maxTokens: 512,
   });
 

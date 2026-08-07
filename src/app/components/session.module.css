@@ -2,6 +2,7 @@
 
 /* 표지 */
 .cover {
+  position: relative;
   min-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -54,6 +55,43 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
+}
+
+.tabStack {
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+}
+
+.notebookTab {
+  display: block;
+  box-sizing: content-box;
+  background: var(--notebook-accent);
+  color: #ffffff;
+  border-radius: 0 8px 0 0;
+  padding: 14px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  writing-mode: vertical-rl;
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+.essayNotesTab {
+  display: block;
+  box-sizing: content-box;
+  background: var(--essay-notes-accent);
+  color: #ffffff;
+  border-radius: 0 0 8px 0;
+  padding: 14px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  writing-mode: vertical-rl;
+  letter-spacing: 2px;
+  white-space: nowrap;
 }
 
 /* 교재 섹션 */
@@ -139,6 +177,42 @@
   color: var(--foreground);
 }
 
+.questionCardOvercome {
+  opacity: 0.6;
+}
+
+.questionPromptRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.questionPromptRow .questionPrompt {
+  margin-bottom: 0;
+}
+
+.overcomeBadge {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--notebook-accent-text);
+  background: var(--notebook-accent-bg);
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.overcomeMeta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.choiceButton:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
 /* 서술형 */
 .essayWrapper {
   margin-top: 14px;
@@ -194,6 +268,69 @@
 .essayFeedback {
   margin-top: 10px;
   font-size: 12px;
+}
+
+.essayScoreLine {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.conceptChecklist {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.conceptCovered {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.conceptMissing {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.grammarList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grammarItem {
+  background: var(--background);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.grammarOriginal {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-decoration: line-through;
+}
+
+.grammarArrow {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 6px;
+}
+
+.grammarCorrected {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.grammarExplanation {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
 }
 
 /* 오늘의 어휘 */

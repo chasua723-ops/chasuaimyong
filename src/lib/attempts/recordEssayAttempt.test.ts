@@ -4,18 +4,22 @@ import { createMockSupabase } from '../../../tests/helpers/mockSupabase';
 import { gradeEssay } from '../ai/gradeEssay';
 
 vi.mock('../ai/gradeEssay', () => ({
-  gradeEssay: vi.fn().mockResolvedValue({ contentScore: 75, chineseScore: 55, feedback: '표현 개선 필요' }),
+  gradeEssay: vi.fn().mockResolvedValue({
+    conceptScore: 3,
+    conceptChecklist: [
+      { concept: '개념1', covered: true },
+      { concept: '개념2', covered: false },
+      { concept: '개념3', covered: true },
+      { concept: '개념4', covered: true },
+    ],
+    grammarCorrections: [{ original: '错误句子', corrected: '正确句子', explanation: '설명' }],
+  }),
 }));
 
 function baseTables() {
   return {
     questions: [
-      {
-        id: 'q1',
-        book_id: 'b1',
-        source_page: 30,
-        prompt: '루쉰 문학의 특징을 서술하시오',
-      },
+      { id: 'q1', book_id: 'b1', source_page: 30, prompt: '루쉰 문학의 특징을 서술하시오' },
     ],
     books: [{ id: 'b1', name: '중국문학사' }],
     book_pages: [{ book_id: 'b1', page_num: 30, content: '루쉰의 광인일기' }],
@@ -24,7 +28,7 @@ function baseTables() {
 }
 
 describe('recordEssayAttempt', () => {
-  it('saves the Korean draft and Chinese answer separately with their AI scores', async () => {
+  it('saves the concept score, checklist, and grammar corrections', async () => {
     const supabase = createMockSupabase(baseTables());
 
     const result = await recordEssayAttempt(supabase as any, {} as any, {
@@ -33,14 +37,19 @@ describe('recordEssayAttempt', () => {
       chineseAnswer: '鲁迅用现实主义手法...',
     });
 
-    expect(result).toEqual({ contentScore: 75, chineseScore: 55, feedback: '표현 개선 필요' });
+    expect(result.conceptScore).toBe(3);
     expect(supabase.inserted.attempts[0]).toMatchObject({
       question_id: 'q1',
       korean_draft: '루쉰은 사실주의 기법으로...',
       chinese_answer: '鲁迅用现实主义手法...',
-      content_score: 75,
-      chinese_score: 55,
-      ai_feedback: '표현 개선 필요',
+      concept_score: 3,
+      concept_checklist: [
+        { concept: '개념1', covered: true },
+        { concept: '개념2', covered: false },
+        { concept: '개념3', covered: true },
+        { concept: '개념4', covered: true },
+      ],
+      grammar_corrections: [{ original: '错误句子', corrected: '正确句子', explanation: '설명' }],
     });
   });
 

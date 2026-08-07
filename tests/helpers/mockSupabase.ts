@@ -14,6 +14,7 @@ export function createMockSupabase(tables: TableData) {
 
     const api: any = {
       select: () => api,
+      order: () => api,
       eq: (col: string, val: any) => {
         rows = rows.filter((r) => r[col] === val);
         return api;

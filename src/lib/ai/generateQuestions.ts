@@ -25,17 +25,21 @@ export async function generateQuestions(
   const referenceText = input.referenceExcerpts?.length
     ? `\n\n실제 기출문제 스타일 참고:\n${input.referenceExcerpts.join('\n---\n')}`
     : '';
+  const essayInstruction = input.types.includes('essay')
+    ? '\n\nessay 유형 문제의 prompt는 반드시 중국어로 출제하세요 (실제 임용고시 서술형 문제는 중국어로 제시됩니다).'
+    : '';
 
   const prompt =
     `다음은 "${input.bookName}" 교재의 일부 발췌입니다. 이 내용만을 근거로 ` +
     `${input.types.join(', ')} 유형의 문제를 각 1개씩 만들어주세요. ` +
     `각 문제는 반드시 아래 JSON 배열 형식으로만 응답하세요:\n` +
     `[{"type":"grammar","sourcePage":12,"prompt":"...","choices":["...","..."],"correctAnswer":"..."}]\n\n` +
-    `교재 발췌:\n${pageText}${referenceText}`;
+    `교재 발췌:\n${pageText}${referenceText}${essayInstruction}`;
 
   const raw = await askClaude(client, prompt, {
     system:
-      '당신은 중등 임용고시 중국어 과목 출제 위원입니다. 반드시 주어진 교재 내용에만 근거해 문제를 냅니다.',
+      '당신은 중등 임용고시 중국어 과목 출제 위원입니다. 반드시 주어진 교재 내용에만 근거해 문제를 냅니다. ' +
+      '중국어 텍스트는 반드시 간체자(简体字)로만 작성하세요. 번체자(繁體字)는 절대 사용하지 마세요.',
     maxTokens: 2048,
   });
 
