@@ -45,18 +45,6 @@ export async function generateQuizPractice(
 
   const maxPage = Math.max(1, book.current_page);
 
-  let page: { page_num: number; content: string } | null = null;
-  for (let attempt = 0; attempt < 2 && !page; attempt++) {
-    const pageNum = randomPage(maxPage);
-    const { data } = await (supabase.from('book_pages') as any)
-      .select('page_num, content')
-      .eq('book_id', input.bookId)
-      .eq('page_num', pageNum)
-      .maybeSingle();
-    page = data;
-  }
-  if (!page) throw new Error('No page content found for quiz practice');
-
   let referenceExcerpts: string[] | undefined;
   if (type === 'reading') {
     const { data: refs } = await (supabase.from('reference_materials') as any)
@@ -66,12 +54,38 @@ export async function generateQuizPractice(
     referenceExcerpts = (refs ?? []).map((r: any) => r.content);
   }
 
-  const [generated] = await generateQuestions(aiClient, {
-    bookName: book.name,
-    pages: [{ pageNum: page.page_num, content: page.content }],
-    types: [type],
-    referenceExcerpts,
-  });
+  // A random page in [1, current_page] can land on front matter (title page, copyright,
+  // ISBN info) with no teachable content — Claude then declines with prose instead of the
+  // requested JSON, which generateQuestions surfaces as a thrown error. Retry with a fresh
+  // page rather than failing the whole request on one unlucky draw.
+  let generated: Awaited<ReturnType<typeof generateQuestions>>[number] | undefined;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3 && !generated; attempt++) {
+    const pageNum = randomPage(maxPage);
+    const { data: page } = await (supabase.from('book_pages') as any)
+      .select('page_num, content')
+      .eq('book_id', input.bookId)
+      .eq('page_num', pageNum)
+      .maybeSingle();
+    if (!page) continue;
+
+    try {
+      const [result] = await generateQuestions(aiClient, {
+        bookName: book.name,
+        pages: [{ pageNum: page.page_num, content: page.content }],
+        types: [type],
+        referenceExcerpts,
+      });
+      generated = result;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  if (!generated) {
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('No page content found for quiz practice');
+  }
 
   const { data: inserted, error } = await (supabase.from('questions') as any)
     .insert({
