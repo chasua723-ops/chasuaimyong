@@ -71,4 +71,25 @@ describe('generateEssayPractice', () => {
       generateEssayPractice(supabase as any, {} as any, { bookId: 'missing' })
     ).rejects.toThrow('Book not found');
   });
+
+  it('retries on a different page when generateQuestions rejects (e.g. the page has no teachable content)', async () => {
+    // Reproduces the same live failure hit by 더 풀기: a random page landed on front matter
+    // (copyright/ISBN info) and Claude declined with prose instead of JSON, which
+    // generateQuestions surfaces as a thrown error rather than a missing book_pages row.
+    vi.mocked(generateQuestions)
+      .mockRejectedValueOnce(new Error('Failed to parse JSON from Claude response: 이 내용으로는...'))
+      .mockResolvedValueOnce([
+        { type: 'essay', sourcePage: 5, prompt: '재시도 성공 서술형 문제', correctAnswer: '' },
+      ]);
+    const supabase = createMockSupabase(baseTables());
+    const randomSpy = vi.spyOn(Math, 'random');
+    randomSpy.mockReturnValueOnce(0.05); // -> page 1 (front matter, generateQuestions rejects)
+    randomSpy.mockReturnValueOnce(0.95); // -> page 10 (succeeds)
+
+    const result = await generateEssayPractice(supabase as any, {} as any, { bookId: 'b1' });
+
+    expect(result.prompt).toBe('재시도 성공 서술형 문제');
+    expect(result.sourcePage).toBe(10);
+    randomSpy.mockRestore();
+  });
 });
