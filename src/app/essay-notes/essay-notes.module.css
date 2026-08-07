@@ -55,6 +55,12 @@
   margin: 8px 0;
 }
 
+.practiceError {
+  font-size: 12px;
+  color: #d64545;
+  margin: 8px 0;
+}
+
 .empty {
   color: var(--text-secondary);
   font-size: 13px;

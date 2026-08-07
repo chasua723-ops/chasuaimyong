@@ -40,6 +40,7 @@ export default function EssayNotesPage() {
   const [chineseAnswer, setChineseAnswer] = useState('');
   const [practiceFeedback, setPracticeFeedback] = useState<EssayFeedback | undefined>(undefined);
   const [grading, setGrading] = useState(false);
+  const [practiceError, setPracticeError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,12 +65,17 @@ export default function EssayNotesPage() {
 
   async function startPractice(bookId: string) {
     setGenerating(true);
+    setPracticeError(null);
     try {
       const res = await fetch('/api/essay-notes/new', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bookId }),
       });
+      if (!res.ok) {
+        setPracticeError('새 문제를 만들지 못했어요. 다시 시도해주세요.');
+        return;
+      }
       const question = await res.json();
       setPracticeQuestion(question);
       setPickingBook(false);
@@ -84,6 +90,7 @@ export default function EssayNotesPage() {
   async function submitPractice() {
     if (!practiceQuestion) return;
     setGrading(true);
+    setPracticeError(null);
     try {
       const res = await fetch('/api/attempts/essay', {
         method: 'POST',
@@ -94,6 +101,10 @@ export default function EssayNotesPage() {
           chineseAnswer,
         }),
       });
+      if (!res.ok) {
+        setPracticeError('채점하지 못했어요. 다시 시도해주세요.');
+        return;
+      }
       const result = await res.json();
       setPracticeFeedback(result);
       const notesRes = await fetch('/api/essay-notes');
@@ -102,6 +113,14 @@ export default function EssayNotesPage() {
     } finally {
       setGrading(false);
     }
+  }
+
+  function startAnotherPractice() {
+    setPracticeQuestion(null);
+    setPracticeFeedback(undefined);
+    setKoreanDraft('');
+    setChineseAnswer('');
+    setPracticeError(null);
   }
 
   if (error) return <p className={styles.page}>{error}</p>;
@@ -130,6 +149,7 @@ export default function EssayNotesPage() {
             </button>
           ))}
           {generating && <p className={styles.loading}>문제 만드는 중...</p>}
+          {practiceError && <p className={styles.practiceError}>{practiceError}</p>}
         </div>
       )}
 
@@ -152,6 +172,12 @@ export default function EssayNotesPage() {
         />
       )}
       {grading && <p className={styles.loading}>채점 중...</p>}
+      {practiceQuestion && practiceError && <p className={styles.practiceError}>{practiceError}</p>}
+      {practiceQuestion && practiceFeedback && (
+        <button className={styles.newButton} onClick={startAnotherPractice}>
+          새 문제 더 풀기
+        </button>
+      )}
 
       <h2 className={styles.subtitle}>지난 답안</h2>
       {notes.length === 0 && <p className={styles.empty}>아직 제출한 서술형 답안이 없어요.</p>}

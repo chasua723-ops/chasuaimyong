@@ -111,4 +111,49 @@ describe('Essay notes page', () => {
     expect(await screen.findByText(/불러오지 못했어요/)).toBeInTheDocument();
     consoleError.mockRestore();
   });
+
+  it('shows a Korean error message when generating a new question fails, without rendering a broken question', async () => {
+    mockFetch({
+      '/api/essay-notes': () => ({
+        ok: true,
+        json: async () => ({ notes: baseNotes, books: [{ id: 'b1', name: '문학개론' }] }),
+      }),
+      'POST /api/essay-notes/new': () => ({ ok: false, status: 500 }),
+    });
+
+    render(<EssayNotesPage />);
+    await screen.findByText(/鲁迅文学的特点是什么/);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('새 문제 풀기'));
+    await user.click(await screen.findByRole('button', { name: '문학개론' }));
+
+    expect(
+      await screen.findByText('새 문제를 만들지 못했어요. 다시 시도해주세요.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('제출')).not.toBeInTheDocument();
+  });
+
+  it('lets the user start another practice question after successfully submitting one', async () => {
+    render(<EssayNotesPage />);
+    await screen.findByText(/鲁迅文学的特点是什么/);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('새 문제 풀기'));
+    await user.click(await screen.findByRole('button', { name: '문학개론' }));
+    await screen.findByText(/这篇课文的主题是什么/);
+
+    const koreanBox = screen.getByLabelText(/1단계/);
+    const chineseBox = screen.getByLabelText(/2단계/);
+    await user.type(koreanBox, '내용 요약');
+    await user.type(chineseBox, '答案内容');
+    await user.click(screen.getByText('제출'));
+
+    await waitFor(() => expect(screen.getByText('4/4점')).toBeInTheDocument());
+
+    await user.click(screen.getByText('새 문제 더 풀기'));
+
+    expect(screen.queryByText(/这篇课文的主题是什么/)).not.toBeInTheDocument();
+    expect(screen.getByText('새 문제 풀기')).toBeInTheDocument();
+  });
 });
