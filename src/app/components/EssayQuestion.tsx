@@ -1,6 +1,7 @@
 'use client';
 
 import type { Question, EssayFeedback } from './types';
+import { containsChinese } from '@/lib/containsChinese';
 import styles from './session.module.css';
 
 interface EssayQuestionProps {
@@ -25,7 +26,9 @@ export default function EssayQuestion({
   return (
     <div className={styles.essayWrapper}>
       <span className={styles.essayBadge}>서술형</span>
-      <p className={styles.essayPrompt}>{question.prompt}</p>
+      <p className={`${styles.essayPrompt}${containsChinese(question.prompt) ? ' zh' : ''}`}>
+        {question.prompt}
+      </p>
 
       <label className={styles.essayStepLabel} htmlFor={`ko-${question.id}`}>
         1단계 · 한국어로 내용 정리
@@ -42,7 +45,7 @@ export default function EssayQuestion({
       </label>
       <textarea
         id={`zh-${question.id}`}
-        className={styles.essayTextarea}
+        className={`${styles.essayTextarea} zh`}
         value={chineseAnswer}
         onChange={(e) => onChineseChange(e.target.value)}
       />
