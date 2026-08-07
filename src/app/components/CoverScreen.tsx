@@ -34,12 +34,14 @@ export default function CoverScreen({ bookRanges, onStart }: CoverScreenProps) {
       <button className={styles.startButton} onClick={onStart}>
         오늘의 학습 시작하기 →
       </button>
-      <Link href="/notebook" className={styles.notebookTab}>
-        오답노트
-      </Link>
-      <Link href="/essay-notes" className={styles.essayNotesTab}>
-        서술형 노트
-      </Link>
+      <div className={styles.tabStack}>
+        <Link href="/notebook" className={styles.notebookTab}>
+          오답노트
+        </Link>
+        <Link href="/essay-notes" className={styles.essayNotesTab}>
+          서술형 노트
+        </Link>
+      </div>
     </div>
   );
 }
