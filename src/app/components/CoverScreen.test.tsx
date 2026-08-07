@@ -34,4 +34,11 @@ describe('CoverScreen', () => {
     const link = screen.getByText('오답노트').closest('a');
     expect(link).toHaveAttribute('href', '/notebook');
   });
+
+  it('links to the essay notebook via a second binder tab', () => {
+    render(<CoverScreen bookRanges={bookRanges} onStart={vi.fn()} />);
+
+    const link = screen.getByText('서술형 노트').closest('a');
+    expect(link).toHaveAttribute('href', '/essay-notes');
+  });
 });

@@ -37,6 +37,9 @@ export default function CoverScreen({ bookRanges, onStart }: CoverScreenProps) {
       <Link href="/notebook" className={styles.notebookTab}>
         오답노트
       </Link>
+      <Link href="/essay-notes" className={styles.essayNotesTab}>
+        서술형 노트
+      </Link>
     </div>
   );
 }

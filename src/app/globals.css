@@ -14,6 +14,9 @@
   --notebook-accent: #f4832b;
   --notebook-accent-bg: #fef1e2;
   --notebook-accent-text: #b5590a;
+  --essay-notes-accent: #7c6bb0;
+  --essay-notes-accent-bg: #f0eef8;
+  --essay-notes-accent-text: #4f4380;
 }
 
 html {
