@@ -62,6 +62,32 @@ export default function BookSection({
   const [practiceFeedback, setPracticeFeedback] = useState<Record<string, QuizFeedback>>({});
   const [generating, setGenerating] = useState(false);
   const [practiceError, setPracticeError] = useState<string | null>(null);
+  const [range, setRange] = useState({ startPage, endPage });
+  const [advancing, setAdvancing] = useState(false);
+  const [advanceError, setAdvanceError] = useState<string | null>(null);
+  const [justAdvanced, setJustAdvanced] = useState(false);
+
+  async function confirmProgress() {
+    setAdvancing(true);
+    setAdvanceError(null);
+    setJustAdvanced(false);
+    try {
+      const res = await fetch('/api/progress/advance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId }),
+      });
+      if (!res.ok) {
+        setAdvanceError('진도를 갱신하지 못했어요. 다시 시도해주세요.');
+        return;
+      }
+      const result = await res.json();
+      setRange({ startPage: result.range.startPage, endPage: result.range.endPage });
+      setJustAdvanced(true);
+    } finally {
+      setAdvancing(false);
+    }
+  }
 
   async function requestMorePractice() {
     setGenerating(true);
@@ -104,7 +130,7 @@ export default function BookSection({
         <span className={styles.bookIcon}>{getBookIcon(name)}</span>
         <strong className={styles.bookName}>{name}</strong>
         <span className={styles.bookRangeBadge}>
-          {startPage}~{endPage}p
+          {range.startPage}~{range.endPage}p
         </span>
       </div>
 
@@ -146,6 +172,15 @@ export default function BookSection({
           onSubmit={onSubmitEssay}
         />
       )}
+
+      <button className={styles.confirmProgressButton} onClick={confirmProgress} disabled={advancing}>
+        오늘 분량 다 읽었어요
+      </button>
+      {advancing && <p className={styles.morePracticeLoading}>진도 갱신 중...</p>}
+      {justAdvanced && !advancing && (
+        <p className={styles.progressConfirmed}>진도가 갱신됐어요. 다음은 {range.startPage}~{range.endPage}p예요.</p>
+      )}
+      {advanceError && <p className={styles.morePracticeError}>{advanceError}</p>}
     </section>
   );
 }

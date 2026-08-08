@@ -205,4 +205,89 @@ describe('BookSection', () => {
       })
     );
   });
+
+  it('always shows a button to confirm today\'s pages were read', () => {
+    render(
+      <BookSection
+        bookId="b1"
+        name="문법"
+        startPage={11}
+        endPage={19}
+        quizQuestions={quizQuestions}
+        essayQuestion={undefined}
+        quizFeedback={{}}
+        koreanDraft=""
+        chineseAnswer=""
+        essayFeedback={undefined}
+        {...noop}
+      />
+    );
+
+    expect(screen.getByText('오늘 분량 다 읽었어요')).toBeInTheDocument();
+  });
+
+  it('advances progress and updates the displayed page range when confirmed', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        bookId: 'b1',
+        currentPage: 20,
+        currentReadCount: 1,
+        range: { startPage: 20, endPage: 28 },
+      }),
+    }) as any;
+
+    render(
+      <BookSection
+        bookId="b1"
+        name="문법"
+        startPage={11}
+        endPage={19}
+        quizQuestions={[]}
+        essayQuestion={undefined}
+        quizFeedback={{}}
+        koreanDraft=""
+        chineseAnswer=""
+        essayFeedback={undefined}
+        {...noop}
+      />
+    );
+
+    expect(screen.getByText('11~19p')).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('오늘 분량 다 읽었어요'));
+
+    expect(await screen.findByText('20~28p')).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/progress/advance',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ bookId: 'b1' }) })
+    );
+  });
+
+  it('shows an error and keeps the old range when confirming progress fails', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false }) as any;
+
+    render(
+      <BookSection
+        bookId="b1"
+        name="문법"
+        startPage={11}
+        endPage={19}
+        quizQuestions={[]}
+        essayQuestion={undefined}
+        quizFeedback={{}}
+        koreanDraft=""
+        chineseAnswer=""
+        essayFeedback={undefined}
+        {...noop}
+      />
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('오늘 분량 다 읽었어요'));
+
+    expect(await screen.findByText('진도를 갱신하지 못했어요. 다시 시도해주세요.')).toBeInTheDocument();
+    expect(screen.getByText('11~19p')).toBeInTheDocument();
+  });
 });
