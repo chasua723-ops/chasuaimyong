@@ -5,6 +5,12 @@ import { assembleDailySession } from '@/lib/session/assembleDailySession';
 import { calculateDailyRange } from '@/lib/pacing';
 import { getTodayInSeoul } from '@/lib/date';
 
+// The first request of a new day assembles the whole day's session (AI generation across
+// every book), which can take longer than the platform's default function timeout even with
+// concurrent generation. Every request after that hits the early-return cached-session path
+// and is fast.
+export const maxDuration = 60;
+
 export async function GET() {
   try {
     return await handleGet();

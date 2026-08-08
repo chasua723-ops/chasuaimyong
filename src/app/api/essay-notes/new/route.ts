@@ -3,6 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import { getAnthropicClient } from '@/lib/ai/client';
 import { generateEssayPractice } from '@/lib/essay/generateEssayPractice';
 
+// generateFromRandomPage can retry up to 3 times (generate + validate each), so a run of
+// bad luck can take longer than the platform's default function timeout.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as { bookId: string };
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);

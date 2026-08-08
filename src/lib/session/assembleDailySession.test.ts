@@ -1,16 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { assembleDailySession } from './assembleDailySession';
 import { createMockSupabase } from '../../../tests/helpers/mockSupabase';
-import { generateQuestions } from '../ai/generateQuestions';
+import { generateQuestions, type GeneratedQuestion, type QuestionGenInput } from '../ai/generateQuestions';
 import { curateVocab } from '../ai/curateVocab';
 
+async function defaultGenerateQuestionsImpl(
+  _client: any,
+  input: QuestionGenInput
+): Promise<GeneratedQuestion[]> {
+  if (input.types.includes('essay')) {
+    return [{ type: 'essay', sourcePage: 3, prompt: '서술형 문제', correctAnswer: '모범답안' }];
+  }
+  return [{ type: 'grammar', sourcePage: 3, prompt: 'q', correctAnswer: 'a' }];
+}
+
 vi.mock('../ai/generateQuestions', () => ({
-  generateQuestions: vi.fn(async (_client: any, input: any) => {
-    if (input.types.includes('essay')) {
-      return [{ type: 'essay', sourcePage: 3, prompt: '서술형 문제', correctAnswer: '모범답안' }];
-    }
-    return [{ type: 'grammar', sourcePage: 3, prompt: 'q', correctAnswer: 'a' }];
-  }),
+  generateQuestions: vi.fn(defaultGenerateQuestionsImpl),
 }));
 vi.mock('../ai/validateQuestion', () => ({
   validateQuestion: vi.fn().mockResolvedValue({ valid: true, reason: 'ok' }),
@@ -53,7 +58,11 @@ const baseTables = {
 
 describe('assembleDailySession', () => {
   beforeEach(() => {
-    vi.mocked(generateQuestions).mockClear();
+    // mockReset + reinstate, not just mockClear: a test earlier in this file may have
+    // installed a persistent override (e.g. mockRejectedValue) to reliably fail every
+    // concurrent call under Promise.all — mockClear alone would leave that override in
+    // place and leak into later tests that expect the default success behavior.
+    vi.mocked(generateQuestions).mockReset().mockImplementation(defaultGenerateQuestionsImpl);
     vi.mocked(curateVocab).mockClear();
   });
 
@@ -135,13 +144,12 @@ describe('assembleDailySession', () => {
 
   it('inserts no daily_sessions row when question generation fails, so the day can be retried', async () => {
     const supabase = createMockSupabase(baseTables);
-    // generateFromRandomPage retries up to 3 times on failure, so a single rejection
-    // wouldn't propagate — reject all 3 attempts (queued, not persistent, so it doesn't leak
-    // into later tests) to exercise "generation is unrecoverable, so no session gets inserted".
-    vi.mocked(generateQuestions)
-      .mockRejectedValueOnce(new Error('Claude blew up'))
-      .mockRejectedValueOnce(new Error('Claude blew up'))
-      .mockRejectedValueOnce(new Error('Claude blew up'));
+    // Quiz questions now generate concurrently (Promise.all across the book's 3 types), so a
+    // few queued mockRejectedValueOnce calls would be consumed unpredictably across those
+    // concurrent retry loops and might not exhaust any single one of them. Reject
+    // unconditionally instead — safe because beforeEach resets the mock's implementation
+    // before every test, so this doesn't leak into later tests.
+    vi.mocked(generateQuestions).mockRejectedValue(new Error('Claude blew up'));
 
     await expect(
       assembleDailySession(supabase as any, {} as any, '2026-08-03')

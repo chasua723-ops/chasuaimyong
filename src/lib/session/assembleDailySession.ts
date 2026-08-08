@@ -19,6 +19,99 @@ interface PendingQuestion {
 
 const QUESTIONS_PER_BOOK = 3;
 
+async function generateQuestionsForBook(
+  supabase: SupabaseClient,
+  aiClient: Anthropic,
+  book: any,
+  essayBook: any,
+  today: string,
+  weights: Record<string, number>
+): Promise<PendingQuestion[]> {
+  const range = calculateDailyRange({
+    totalPages: book.total_pages,
+    examDate: book.exam_date,
+    today,
+    targetReadCount: book.target_read_count,
+    currentReadCount: book.current_read_count,
+    currentPage: book.current_page,
+  });
+
+  const quizWeights = Object.fromEntries(
+    QUIZ_TYPES.map((t) => [t, weights[t] ?? 0.5])
+  ) as Record<(typeof QUIZ_TYPES)[number], number>;
+  const types = pickWeightedTypes(quizWeights as any, QUESTIONS_PER_BOOK);
+
+  // Quiz questions are sourced from the book's full range covered by today (1..endPage), not
+  // just today's assigned slice, so review of earlier material is mixed in for spaced
+  // retrieval practice. Each question gets its own independently random page, and all of a
+  // book's questions (plus its essay question, if any) generate concurrently.
+  const quizGenerations = types.map((type) =>
+    generateFromRandomPage(supabase, aiClient, {
+      bookId: book.id,
+      bookName: book.name,
+      maxPage: Math.max(1, range.endPage),
+      type,
+    })
+  );
+
+  const essayGeneration =
+    book.id === essayBook.id ? generateEssayForBook(supabase, aiClient, book, range) : Promise.resolve([]);
+
+  const [quizResults, essayQuestions] = await Promise.all([
+    Promise.all(quizGenerations),
+    essayGeneration,
+  ]);
+
+  const pendingQuestions: PendingQuestion[] = quizResults.map((generated) => ({
+    book_id: book.id,
+    type: generated.type,
+    source_page: generated.sourcePage,
+    prompt: generated.prompt,
+    choices: generated.choices ?? null,
+    correct_answer: generated.correctAnswer,
+    used_reference: generated.usedReference,
+  }));
+
+  return [...pendingQuestions, ...essayQuestions];
+}
+
+async function generateEssayForBook(
+  supabase: SupabaseClient,
+  aiClient: Anthropic,
+  book: any,
+  range: { startPage: number; endPage: number }
+): Promise<PendingQuestion[]> {
+  const { data: pages, error: pagesError } = await (supabase.from('book_pages') as any)
+    .select('page_num, content')
+    .eq('book_id', book.id)
+    .gte('page_num', range.startPage)
+    .lte('page_num', range.endPage);
+  if (pagesError) throw new Error(`Failed to fetch book pages: ${pagesError.message}`);
+  const pageRange = (pages ?? []).map((p: any) => ({ pageNum: p.page_num, content: p.content }));
+
+  // Claude sometimes returns a sourcePage outside the excerpt it was given. Persisting that
+  // would break the later book_pages lookup in recordEssayAttempt, silently degrading the
+  // RAG grounding to an empty page while the UI still claims "(N페이지 참고)".
+  const clampPage = (page: number) =>
+    Math.min(Math.max(Number(page) || range.startPage, range.startPage), range.endPage);
+
+  const essayGenerated = await generateQuestions(aiClient, {
+    bookName: book.name,
+    pages: pageRange,
+    types: ['essay'],
+  });
+
+  return essayGenerated.map((q) => ({
+    book_id: book.id,
+    type: 'essay' as const,
+    source_page: clampPage(q.sourcePage),
+    prompt: q.prompt,
+    choices: null,
+    correct_answer: q.correctAnswer,
+    used_reference: false,
+  }));
+}
+
 export async function assembleDailySession(
   supabase: SupabaseClient,
   aiClient: Anthropic,
@@ -51,78 +144,17 @@ export async function assembleDailySession(
   // Everything that can throw (AI generation, curation) happens BEFORE the
   // daily_sessions insert, so a partial failure leaves no session row behind and
   // the next request retries from scratch instead of returning a dead session.
-  const pendingQuestions: PendingQuestion[] = [];
-
-  for (const book of books) {
-    const range = calculateDailyRange({
-      totalPages: book.total_pages,
-      examDate: book.exam_date,
-      today,
-      targetReadCount: book.target_read_count,
-      currentReadCount: book.current_read_count,
-      currentPage: book.current_page,
-    });
-
-    const quizWeights = Object.fromEntries(
-      QUIZ_TYPES.map((t) => [t, weights[t] ?? 0.5])
-    ) as Record<(typeof QUIZ_TYPES)[number], number>;
-    const types = pickWeightedTypes(quizWeights as any, QUESTIONS_PER_BOOK);
-
-    // Quiz questions are sourced from the book's full range covered by today (1..endPage),
-    // not just today's assigned slice, so review of earlier material is mixed in for spaced
-    // retrieval practice. Each question gets its own independently random page.
-    for (const type of types) {
-      const generated = await generateFromRandomPage(supabase, aiClient, {
-        bookId: book.id,
-        bookName: book.name,
-        maxPage: Math.max(1, range.endPage),
-        type,
-      });
-      pendingQuestions.push({
-        book_id: book.id,
-        type: generated.type,
-        source_page: generated.sourcePage,
-        prompt: generated.prompt,
-        choices: generated.choices ?? null,
-        correct_answer: generated.correctAnswer,
-        used_reference: generated.usedReference,
-      });
-    }
-
-    if (book.id === essayBook.id) {
-      const { data: pages, error: pagesError } = await (supabase.from('book_pages') as any)
-        .select('page_num, content')
-        .eq('book_id', book.id)
-        .gte('page_num', range.startPage)
-        .lte('page_num', range.endPage);
-      if (pagesError) throw new Error(`Failed to fetch book pages: ${pagesError.message}`);
-      const pageRange = (pages ?? []).map((p: any) => ({ pageNum: p.page_num, content: p.content }));
-
-      // Claude sometimes returns a sourcePage outside the excerpt it was given.
-      // Persisting that would break the later book_pages lookup in recordEssayAttempt,
-      // silently degrading the RAG grounding to an empty page while the UI still claims
-      // "(N페이지 참고)".
-      const clampPage = (page: number) =>
-        Math.min(Math.max(Number(page) || range.startPage, range.startPage), range.endPage);
-
-      const essayGenerated = await generateQuestions(aiClient, {
-        bookName: book.name,
-        pages: pageRange,
-        types: ['essay'],
-      });
-      for (const q of essayGenerated) {
-        pendingQuestions.push({
-          book_id: book.id,
-          type: 'essay' as const,
-          source_page: clampPage(q.sourcePage),
-          prompt: q.prompt,
-          choices: null,
-          correct_answer: q.correctAnswer,
-          used_reference: false,
-        });
-      }
-    }
-  }
+  //
+  // Each book's generation work (its quiz questions plus, for one book, the essay
+  // question) runs concurrently — both across books and within a book — instead of
+  // sequentially. generateFromRandomPage now does two AI calls per question (generate +
+  // validate) with up to 3 retries each; run one-at-a-time across e.g. 3 books x 3
+  // questions, that easily exceeds a serverless function's execution time limit. Wall-clock
+  // time is now bounded by the single slowest call, not the sum of all of them.
+  const pendingQuestionsByBook = await Promise.all(
+    books.map((book: any) => generateQuestionsForBook(supabase, aiClient, book, essayBook, today, weights))
+  );
+  const pendingQuestions: PendingQuestion[] = pendingQuestionsByBook.flat();
 
   const { data: existingVocab, error: existingVocabError } = await (supabase.from('vocab_of_the_day') as any)
     .select('*')
