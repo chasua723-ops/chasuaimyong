@@ -183,4 +183,27 @@ describe('generateFromRandomPage', () => {
       })
     ).rejects.toThrow('No page content found for question generation');
   });
+
+  it('never draws a page below minPage even when earlier pages exist in book_pages', async () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01); // would resolve to page 1 without minPage
+    const supabase = createMockSupabase(
+      baseTables({
+        book_pages: [
+          { book_id: 'b1', page_num: 1, content: '범위 밖 페이지' },
+          { book_id: 'b1', page_num: 5, content: '범위 안 페이지' },
+        ],
+      })
+    );
+
+    const result = await generateFromRandomPage(supabase as any, {} as any, {
+      bookId: 'b1',
+      bookName: '전공중국어 문법',
+      minPage: 5,
+      maxPage: 10,
+      type: 'grammar',
+    });
+
+    expect(result.sourcePage).toBe(5);
+    randomSpy.mockRestore();
+  });
 });

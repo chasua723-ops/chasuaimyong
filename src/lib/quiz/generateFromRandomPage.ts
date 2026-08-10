@@ -7,6 +7,7 @@ import { validateQuestion } from '../ai/validateQuestion';
 export interface GenerateFromRandomPageInput {
   bookId: string;
   bookName: string;
+  minPage?: number;
   maxPage: number;
   type: QuestionType;
 }
@@ -17,15 +18,16 @@ export interface RandomPageGenerationResult extends GeneratedQuestion {
 
 const MAX_ATTEMPTS = 6;
 
-function randomPage(maxPage: number): number {
-  return Math.floor(Math.random() * maxPage) + 1;
+function randomPage(minPage: number, maxPage: number): number {
+  return Math.floor(Math.random() * (maxPage - minPage + 1)) + minPage;
 }
 
-/** Draws a page not yet in `tried`, unless every page in [1, maxPage] has already been tried. */
-function randomUntriedPage(maxPage: number, tried: Set<number>): number {
-  let pageNum = randomPage(maxPage);
-  while (tried.has(pageNum) && tried.size < maxPage) {
-    pageNum = randomPage(maxPage);
+/** Draws a page not yet in `tried`, unless every page in [minPage, maxPage] has already been tried. */
+function randomUntriedPage(minPage: number, maxPage: number, tried: Set<number>): number {
+  const rangeSize = maxPage - minPage + 1;
+  let pageNum = randomPage(minPage, maxPage);
+  while (tried.has(pageNum) && tried.size < rangeSize) {
+    pageNum = randomPage(minPage, maxPage);
   }
   return pageNum;
 }
@@ -68,6 +70,8 @@ export async function generateFromRandomPage(
   aiClient: Anthropic,
   input: GenerateFromRandomPageInput
 ): Promise<RandomPageGenerationResult> {
+  const minPage = input.minPage ?? 1;
+
   let referenceExcerpts: string[] | undefined;
   if (input.type === 'reading') {
     const { data: refs } = await (supabase.from('reference_materials') as any)
@@ -80,7 +84,7 @@ export async function generateFromRandomPage(
   let lastError: unknown;
   const triedPages = new Set<number>();
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const pageNum = randomUntriedPage(input.maxPage, triedPages);
+    const pageNum = randomUntriedPage(minPage, input.maxPage, triedPages);
     triedPages.add(pageNum);
     const { data: page } = await (supabase.from('book_pages') as any)
       .select('page_num, content')
@@ -115,7 +119,7 @@ export async function generateFromRandomPage(
     const { data: allPages } = await (supabase.from('book_pages') as any)
       .select('page_num, content')
       .eq('book_id', input.bookId)
-      .gte('page_num', 1)
+      .gte('page_num', minPage)
       .lte('page_num', input.maxPage);
     if (allPages?.length) {
       const combined = allPages.map((p: any) => ({ pageNum: p.page_num, content: p.content }));
@@ -131,7 +135,7 @@ export async function generateFromRandomPage(
       if (review.ok) {
         // Now Claude picked among many pages, so its sourcePage can't be trusted blindly —
         // clamp into range the same way the daily session's essay path already does.
-        const sourcePage = Math.min(Math.max(Number(generated.sourcePage) || 1, 1), input.maxPage);
+        const sourcePage = Math.min(Math.max(Number(generated.sourcePage) || minPage, minPage), input.maxPage);
         return { ...generated, sourcePage, usedReference: !!referenceExcerpts?.length };
       }
       lastError = review.error;
