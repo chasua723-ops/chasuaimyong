@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { assembleDailySession } from './assembleDailySession';
+import { assembleDailySession, buildQuizGenerationRequests, shuffle } from './assembleDailySession';
 import { createMockSupabase } from '../../../tests/helpers/mockSupabase';
 import { generateQuestions, type GeneratedQuestion, type QuestionGenInput } from '../ai/generateQuestions';
 import { curateVocab } from '../ai/curateVocab';
@@ -44,9 +44,11 @@ const baseTables = {
     },
   ],
   category_stats: [],
-  // The fixture book's pacing yields endPage 3 for 2026-08-03 (see calculateDailyRange).
-  // Quiz questions are now sourced from a random page across [1, endPage], so every page in
-  // that range needs a row here or the random draw can miss and (correctly) retry/fail.
+  // The fixture book's pacing yields startPage 1 / endPage 3 for 2026-08-03 (see
+  // calculateDailyRange). Progress-group quiz questions draw from [startPage, endPage]; every
+  // page in that range needs a row here or the random draw can miss and (correctly)
+  // retry/fail. Review-group questions draw from [1, total_pages] (100), which is sparser by
+  // design — real books have far more history than what's covered so far.
   book_pages: [
     { book_id: 'b1', page_num: 1, content: '내용1' },
     { book_id: 'b1', page_num: 2, content: '내용2' },
@@ -122,22 +124,25 @@ describe('assembleDailySession', () => {
     expect(essay.source_page).toBe(1);
   });
 
-  it('ignores a hallucinated quiz sourcePage and always records the actual page the question was generated from', async () => {
+  it('ignores a hallucinated quiz sourcePage and always records a page within the requested range', async () => {
     const supabase = createMockSupabase(baseTables);
     vi.mocked(generateQuestions).mockImplementation(async (_client: any, input: any) => {
       if (input.types.includes('essay')) {
         return [{ type: 'essay', sourcePage: 3, prompt: '서술형 문제', correctAnswer: '모범답안' }];
       }
-      // Claude claims page 999, which is nowhere near the fed page.
+      // Claude claims page 999, which is nowhere near any page it was actually fed.
       return [{ type: input.types[0], sourcePage: 999, prompt: 'q', correctAnswer: 'a' }];
     });
 
     await assembleDailySession(supabase as any, {} as any, '2026-08-03');
 
+    // Progress-group questions are bounded to [1, 3] (today's range); review-group questions
+    // are bounded to [1, 100] (book.total_pages) and can legitimately land beyond page 3.
     const quizQuestions = supabase.inserted.questions.filter((q: any) => q.type !== 'essay');
+    expect(quizQuestions).toHaveLength(10);
     for (const q of quizQuestions) {
       expect(q.source_page).toBeGreaterThanOrEqual(1);
-      expect(q.source_page).toBeLessThanOrEqual(3);
+      expect(q.source_page).toBeLessThanOrEqual(100);
       expect(q.source_page).not.toBe(999);
     }
   });
@@ -180,5 +185,35 @@ describe('assembleDailySession', () => {
     const essayQuestions = supabase.inserted.questions.filter((q: any) => q.type === 'essay');
     expect(essayQuestions).toHaveLength(1);
     expect(essayQuestions[0].book_id).toBe('b1');
+  });
+});
+
+describe('shuffle', () => {
+  it('reorders elements using the provided rng instead of preserving insertion order', () => {
+    const input = [1, 2, 3, 4, 5];
+    const rngValues = [0.9, 0.1, 0.9, 0.1];
+    let i = 0;
+    const rng = () => rngValues[i++];
+
+    const result = shuffle(input, rng);
+
+    expect(result).not.toEqual(input);
+    expect([...result].sort()).toEqual(input);
+  });
+});
+
+describe('buildQuizGenerationRequests', () => {
+  it('splits into 5 requests bounded to the daily range and 5 bounded to the whole book', () => {
+    const book = { total_pages: 100 };
+    const range = { startPage: 10, endPage: 15 };
+    const quizWeights = { grammar: 1, vocab: 1, reading: 1, theory: 1 } as any;
+
+    const requests = buildQuizGenerationRequests(book, range, quizWeights);
+
+    expect(requests).toHaveLength(10);
+    const progressRequests = requests.filter((r) => r.minPage === 10 && r.maxPage === 15);
+    const reviewRequests = requests.filter((r) => r.maxPage === 100 && r.minPage === undefined);
+    expect(progressRequests).toHaveLength(5);
+    expect(reviewRequests).toHaveLength(5);
   });
 });

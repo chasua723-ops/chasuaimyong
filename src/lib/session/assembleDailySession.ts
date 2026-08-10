@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Anthropic from '@anthropic-ai/sdk';
+import type { QuestionType } from '@/types/db';
 import { calculateDailyRange } from '@/lib/pacing';
 import { calculateWeights, pickWeightedTypes, QUIZ_TYPES, type CategoryStat } from '@/lib/adaptive';
 import { generateQuestions } from '@/lib/ai/generateQuestions';
@@ -17,7 +18,52 @@ interface PendingQuestion {
   used_reference: boolean;
 }
 
-const QUESTIONS_PER_BOOK = 3;
+const QUESTIONS_PROGRESS_PER_BOOK = 5;
+const QUESTIONS_REVIEW_PER_BOOK = 5;
+
+export interface QuizGenerationRequest {
+  type: QuestionType;
+  minPage?: number;
+  maxPage: number;
+}
+
+/** Fisher-Yates shuffle; takes an injectable rng so tests can assert a non-identity permutation deterministically. */
+export function shuffle<T>(arr: T[], rng: () => number = Math.random): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
+ * Builds the 10 per-book quiz generation requests: 5 bounded to today's newly assigned pages
+ * (immediate reinforcement of what was just read) and 5 bounded to the whole textbook,
+ * including pages not yet reached (broader retrieval practice). The two groups are shuffled
+ * together so they render mixed, with no visible "오늘 진도" / "복습" split.
+ */
+export function buildQuizGenerationRequests(
+  book: { total_pages: number },
+  range: { startPage: number; endPage: number },
+  quizWeights: Record<QuestionType, number>,
+  rng: () => number = Math.random
+): QuizGenerationRequest[] {
+  const progressTypes = pickWeightedTypes(quizWeights, QUESTIONS_PROGRESS_PER_BOOK, rng);
+  const reviewTypes = pickWeightedTypes(quizWeights, QUESTIONS_REVIEW_PER_BOOK, rng);
+
+  const progressRequests: QuizGenerationRequest[] = progressTypes.map((type) => ({
+    type,
+    minPage: range.startPage,
+    maxPage: Math.max(range.startPage, range.endPage),
+  }));
+  const reviewRequests: QuizGenerationRequest[] = reviewTypes.map((type) => ({
+    type,
+    maxPage: Math.max(1, book.total_pages),
+  }));
+
+  return shuffle([...progressRequests, ...reviewRequests], rng);
+}
 
 async function generateQuestionsForBook(
   supabase: SupabaseClient,
@@ -39,18 +85,20 @@ async function generateQuestionsForBook(
   const quizWeights = Object.fromEntries(
     QUIZ_TYPES.map((t) => [t, weights[t] ?? 0.5])
   ) as Record<(typeof QUIZ_TYPES)[number], number>;
-  const types = pickWeightedTypes(quizWeights as any, QUESTIONS_PER_BOOK);
+  const quizRequests = buildQuizGenerationRequests(book, range, quizWeights as any);
 
-  // Quiz questions are sourced from the book's full range covered by today (1..endPage), not
-  // just today's assigned slice, so review of earlier material is mixed in for spaced
-  // retrieval practice. Each question gets its own independently random page, and all of a
+  // 5 questions are bounded to today's newly assigned pages (immediate check on what was just
+  // read); 5 are bounded to the whole textbook, including pages not yet reached, for broader
+  // retrieval practice. The two groups are pre-shuffled by buildQuizGenerationRequests so they
+  // render mixed together. Each question gets its own independently random page, and all of a
   // book's questions (plus its essay question, if any) generate concurrently.
-  const quizGenerations = types.map((type) =>
+  const quizGenerations = quizRequests.map((req) =>
     generateFromRandomPage(supabase, aiClient, {
       bookId: book.id,
       bookName: book.name,
-      maxPage: Math.max(1, range.endPage),
-      type,
+      minPage: req.minPage,
+      maxPage: req.maxPage,
+      type: req.type,
     })
   );
 
