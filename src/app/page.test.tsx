@@ -78,6 +78,15 @@ describe('Daily session page', () => {
     expect(screen.getByText(/Q1\./)).toBeInTheDocument();
   });
 
+  it('shows a count-up timer against the 15-minute target after starting', async () => {
+    render(<Page />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByText('오늘의 학습 시작하기 →'));
+
+    expect(await screen.findByText('00:00 / 15:00')).toBeInTheDocument();
+  });
+
   it('shows the explanation and source page after answering a quiz question incorrectly', async () => {
     render(<Page />);
 

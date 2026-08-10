@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import CoverScreen from './components/CoverScreen';
 import BookSection from './components/BookSection';
+import SessionTimer from './components/SessionTimer';
 import VocabCard from './components/VocabCard';
 import type { SessionData, QuizFeedback, EssayFeedback } from './components/types';
 import styles from './page.module.css';
@@ -11,6 +12,7 @@ export default function Page() {
   const [data, setData] = useState<SessionData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
   const [quizFeedback, setQuizFeedback] = useState<Record<string, QuizFeedback>>({});
   const [essayFeedback, setEssayFeedback] = useState<Record<string, EssayFeedback>>({});
   const [koreanDrafts, setKoreanDrafts] = useState<Record<string, string>>({});
@@ -69,13 +71,20 @@ export default function Page() {
   if (!started) {
     return (
       <main className={styles.page}>
-        <CoverScreen bookRanges={data.bookRanges} onStart={() => setStarted(true)} />
+        <CoverScreen
+          bookRanges={data.bookRanges}
+          onStart={() => {
+            setStarted(true);
+            setStartedAt(Date.now());
+          }}
+        />
       </main>
     );
   }
 
   return (
     <main className={styles.page}>
+      {startedAt !== null && <SessionTimer startedAt={startedAt} />}
       {data.bookRanges.map((range) => {
         const bookQuestions = data.questions.filter((q) => q.book_id === range.bookId);
         const quizQuestions = bookQuestions.filter((q) => q.type !== 'essay');
