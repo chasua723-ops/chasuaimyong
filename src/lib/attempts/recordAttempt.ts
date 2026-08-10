@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Anthropic from '@anthropic-ai/sdk';
 import { explainAnswer } from '@/lib/ai/explainAnswer';
+import { stripHighlightMarkers } from '@/lib/text/highlightMarkers';
 
 export interface RecordAttemptInput {
   questionId: string;
@@ -37,9 +38,9 @@ export async function recordAttempt(
       bookName: book?.name ?? '',
       sourcePage: question.source_page,
       pageContent: page?.content ?? '',
-      questionPrompt: question.prompt,
-      correctAnswer: question.correct_answer,
-      userAnswer: input.userAnswer,
+      questionPrompt: stripHighlightMarkers(question.prompt),
+      correctAnswer: stripHighlightMarkers(question.correct_answer),
+      userAnswer: stripHighlightMarkers(input.userAnswer),
     });
   }
 

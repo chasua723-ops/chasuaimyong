@@ -38,7 +38,7 @@ export default function QuizQuestion({
             disabled={overcome}
             onClick={() => onSubmit(question.id, choice)}
           >
-            {choice}
+            <HighlightedText text={choice} />
           </button>
         ))}
       </div>

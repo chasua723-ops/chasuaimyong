@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Anthropic from '@anthropic-ai/sdk';
 import { gradeEssay } from '@/lib/ai/gradeEssay';
+import { stripHighlightMarkers } from '@/lib/text/highlightMarkers';
 
 export interface RecordEssayAttemptInput {
   questionId: string;
@@ -33,7 +34,7 @@ export async function recordEssayAttempt(
   const grade = await gradeEssay(aiClient, {
     bookName: book?.name ?? '',
     pages: [{ pageNum: question.source_page, content: page?.content ?? '' }],
-    questionPrompt: question.prompt,
+    questionPrompt: stripHighlightMarkers(question.prompt),
     koreanDraft: input.koreanDraft,
     chineseAnswer: input.chineseAnswer,
   });

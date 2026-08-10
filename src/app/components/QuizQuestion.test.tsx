@@ -43,6 +43,22 @@ describe('QuizQuestion', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it('highlights a [[ ]]-marked span within a choice, and submits the raw unmarked-looking text', async () => {
+    const markedQuestion: Question = {
+      ...question,
+      choices: ['[[在]]他的脸上都是汗。', '他在书上写了很多汉字。'],
+    };
+    const onSubmit = vi.fn();
+    render(<QuizQuestion question={markedQuestion} index={1} feedback={undefined} onSubmit={onSubmit} />);
+
+    const highlighted = screen.getByText('在');
+    expect(highlighted.tagName).toBe('SPAN');
+    expect(highlighted.className).toMatch(/highlight/);
+
+    await userEvent.setup().click(screen.getByText(/他的脸上都是汗/));
+    expect(onSubmit).toHaveBeenCalledWith('q1', '[[在]]他的脸上都是汗。');
+  });
+
   it('shows the attempt count when overcome and attemptCount are both provided', () => {
     render(
       <QuizQuestion

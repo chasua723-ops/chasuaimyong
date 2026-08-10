@@ -67,4 +67,24 @@ describe('recordEssayAttempt', () => {
       expect.objectContaining({ bookName: '중국문학사' })
     );
   });
+
+  it('strips [[ ]] highlight markers from the question prompt before grading', async () => {
+    const supabase = createMockSupabase({
+      ...baseTables(),
+      questions: [
+        { id: 'q1', book_id: 'b1', source_page: 30, prompt: '[[鲁迅]]문학의 특징을 서술하시오' },
+      ],
+    });
+
+    await recordEssayAttempt(supabase as any, {} as any, {
+      questionId: 'q1',
+      koreanDraft: '초안',
+      chineseAnswer: '答案',
+    });
+
+    expect(gradeEssay).toHaveBeenCalledWith(
+      {} as any,
+      expect.objectContaining({ questionPrompt: '鲁迅문학의 특징을 서술하시오' })
+    );
+  });
 });

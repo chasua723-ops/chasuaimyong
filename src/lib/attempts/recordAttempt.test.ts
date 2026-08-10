@@ -64,6 +64,36 @@ describe('recordAttempt', () => {
     );
   });
 
+  it('strips [[ ]] highlight markers from prompt/answer text before asking for an explanation', async () => {
+    const supabase = createMockSupabase(
+      baseTables({
+        questions: [
+          {
+            id: 'q1',
+            book_id: 'b1',
+            source_page: 12,
+            prompt: '다음 중 밑줄 친 부분이 옳지 않은 것을 고르시오.',
+            correct_answer: '[[在]]他的脸上都是汗。',
+            type: 'grammar',
+          },
+        ],
+      })
+    );
+
+    await recordAttempt(supabase as any, {} as any, {
+      questionId: 'q1',
+      userAnswer: '[[在]]墙上挂着一张中国地图。',
+    });
+
+    expect(explainAnswer).toHaveBeenCalledWith(
+      {} as any,
+      expect.objectContaining({
+        correctAnswer: '在他的脸上都是汗。',
+        userAnswer: '在墙上挂着一张中国地图。',
+      })
+    );
+  });
+
   it('throws a diagnosable error when the attempts insert fails', async () => {
     const question = baseTables().questions[0];
     const supabase = {
