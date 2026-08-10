@@ -17,6 +17,7 @@ export interface RandomPageGenerationResult extends GeneratedQuestion {
 }
 
 const MAX_ATTEMPTS = 6;
+const FALLBACK_WINDOW_PAGES = 15;
 
 function randomPage(minPage: number, maxPage: number): number {
   return Math.floor(Math.random() * (maxPage - minPage + 1)) + minPage;
@@ -49,21 +50,24 @@ async function reviewGeneratedQuestion(
 }
 
 /**
- * Picks a random page in [1, maxPage] and generates one question of `type` grounded in it.
- * A random page can land on front matter (title page, copyright, ISBN info) with no
- * teachable content, or on real prose that still isn't the right subject matter (e.g. a
- * preface, for a grammar question) — either way Claude declines with prose instead of the
- * requested JSON, which generateQuestions surfaces as a thrown error. A page like a table of
- * contents can instead produce a technically well-formed but useless question (e.g. asking
- * about the ToC's own layout), which doesn't throw on its own — so every generated question
- * is also checked structurally (its correctAnswer must be one of its own choices) and
- * reviewed by validateQuestion before being accepted.
+ * Picks a random page in [minPage, maxPage] (minPage defaults to 1) and generates one
+ * question of `type` grounded in it. A random page can land on front matter (title page,
+ * copyright, ISBN info) with no teachable content, or on real prose that still isn't the
+ * right subject matter (e.g. a preface, for a grammar question) — either way Claude declines
+ * with prose instead of the requested JSON, which generateQuestions surfaces as a thrown
+ * error. A page like a table of contents can instead produce a technically well-formed but
+ * useless question (e.g. asking about the ToC's own layout), which doesn't throw on its own
+ * — so every generated question is also checked structurally (its correctAnswer must be one
+ * of its own choices) and reviewed by validateQuestion before being accepted.
  *
- * Early in a book, [1, maxPage] can be dominated by non-content front matter (cover, ToC,
- * preface) with real instructional content not yet reached — MAX_ATTEMPTS single-page draws
- * (each from a page not already tried) can still all miss. As a last resort, one fallback
- * attempt gives Claude the entire [1, maxPage] range as combined context instead of a single
- * page, so it can pick whichever page actually has usable content for `type`.
+ * Early in a book, [minPage, maxPage] can be dominated by non-content front matter (cover,
+ * ToC, preface) with real instructional content not yet reached — MAX_ATTEMPTS single-page
+ * draws (each from a page not already tried) can still all miss. As a last resort, one
+ * fallback attempt gives Claude a random FALLBACK_WINDOW_PAGES-page window within
+ * [minPage, maxPage] as combined context instead of a single page — bounded, not the whole
+ * range, since that range can span an entire textbook (hundreds of pages) for review-group
+ * requests — so it can pick whichever page in that window actually has usable content for
+ * `type`.
  */
 export async function generateFromRandomPage(
   supabase: SupabaseClient,
@@ -116,11 +120,16 @@ export async function generateFromRandomPage(
   }
 
   try {
+    const rangeSize = input.maxPage - minPage + 1;
+    const windowSize = Math.min(rangeSize, FALLBACK_WINDOW_PAGES);
+    const windowStart = minPage + Math.floor(Math.random() * (rangeSize - windowSize + 1));
+    const windowEnd = windowStart + windowSize - 1;
+
     const { data: allPages } = await (supabase.from('book_pages') as any)
       .select('page_num, content')
       .eq('book_id', input.bookId)
-      .gte('page_num', minPage)
-      .lte('page_num', input.maxPage);
+      .gte('page_num', windowStart)
+      .lte('page_num', windowEnd);
     if (allPages?.length) {
       const combined = allPages.map((p: any) => ({ pageNum: p.page_num, content: p.content }));
       const [generated] = await generateQuestions(aiClient, {
@@ -134,8 +143,9 @@ export async function generateFromRandomPage(
       const review = await reviewGeneratedQuestion(aiClient, combinedContent, generated);
       if (review.ok) {
         // Now Claude picked among many pages, so its sourcePage can't be trusted blindly —
-        // clamp into range the same way the daily session's essay path already does.
-        const sourcePage = Math.min(Math.max(Number(generated.sourcePage) || minPage, minPage), input.maxPage);
+        // clamp into the window it actually saw, the same way the daily session's essay
+        // path already does.
+        const sourcePage = Math.min(Math.max(Number(generated.sourcePage) || windowStart, windowStart), windowEnd);
         return { ...generated, sourcePage, usedReference: !!referenceExcerpts?.length };
       }
       lastError = review.error;

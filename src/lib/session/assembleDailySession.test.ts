@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { assembleDailySession, buildQuizGenerationRequests, shuffle } from './assembleDailySession';
+import { assembleDailySession, buildQuizGenerationRequests, createLimiter, shuffle } from './assembleDailySession';
 import { createMockSupabase } from '../../../tests/helpers/mockSupabase';
 import { generateQuestions, type GeneratedQuestion, type QuestionGenInput } from '../ai/generateQuestions';
 import { curateVocab } from '../ai/curateVocab';
@@ -47,13 +47,16 @@ const baseTables = {
   // The fixture book's pacing yields startPage 1 / endPage 3 for 2026-08-03 (see
   // calculateDailyRange). Progress-group quiz questions draw from [startPage, endPage]; every
   // page in that range needs a row here or the random draw can miss and (correctly)
-  // retry/fail. Review-group questions draw from [1, total_pages] (100), which is sparser by
-  // design — real books have far more history than what's covered so far.
-  book_pages: [
-    { book_id: 'b1', page_num: 1, content: '내용1' },
-    { book_id: 'b1', page_num: 2, content: '내용2' },
-    { book_id: 'b1', page_num: 3, content: '내용3' },
-  ],
+  // retry/fail. Review-group questions draw from [1, total_pages] (100) via a bounded random
+  // FALLBACK_WINDOW_PAGES-page window as a last resort (see generateFromRandomPage), so —
+  // unlike before that window was bounded — content needs to be available wherever that
+  // window happens to land, not just at a few known pages. Real OCR'd books have full page
+  // coverage, so the fixture mirrors that instead of staying artificially sparse.
+  book_pages: Array.from({ length: 100 }, (_, i) => ({
+    book_id: 'b1',
+    page_num: i + 1,
+    content: `내용${i + 1}`,
+  })),
   reference_materials: [],
   vocab_of_the_day: [],
 };
@@ -149,11 +152,11 @@ describe('assembleDailySession', () => {
 
   it('inserts no daily_sessions row when question generation fails, so the day can be retried', async () => {
     const supabase = createMockSupabase(baseTables);
-    // Quiz questions now generate concurrently (Promise.all across the book's 3 types), so a
-    // few queued mockRejectedValueOnce calls would be consumed unpredictably across those
-    // concurrent retry loops and might not exhaust any single one of them. Reject
-    // unconditionally instead — safe because beforeEach resets the mock's implementation
-    // before every test, so this doesn't leak into later tests.
+    // Quiz questions now generate concurrently (Promise.all across the book's 10 questions,
+    // rate-limited by the shared concurrency limiter), so a few queued mockRejectedValueOnce
+    // calls would be consumed unpredictably across those concurrent retry loops and might not
+    // exhaust any single one of them. Reject unconditionally instead — safe because beforeEach
+    // resets the mock's implementation before every test, so this doesn't leak into later tests.
     vi.mocked(generateQuestions).mockRejectedValue(new Error('Claude blew up'));
 
     await expect(
@@ -215,5 +218,60 @@ describe('buildQuizGenerationRequests', () => {
     const reviewRequests = requests.filter((r) => r.maxPage === 100 && r.minPage === undefined);
     expect(progressRequests).toHaveLength(5);
     expect(reviewRequests).toHaveLength(5);
+  });
+
+  it('caps the progress-group count to the width of a narrow daily range and reallocates the rest to review', () => {
+    const book = { total_pages: 100 };
+    const range = { startPage: 10, endPage: 12 }; // width 3
+    const quizWeights = { grammar: 1, vocab: 1, reading: 1, theory: 1 } as any;
+
+    const requests = buildQuizGenerationRequests(book, range, quizWeights);
+
+    expect(requests).toHaveLength(10);
+    const progressRequests = requests.filter((r) => r.minPage === 10 && r.maxPage === 12);
+    const reviewRequests = requests.filter((r) => r.maxPage === 100 && r.minPage === undefined);
+    expect(progressRequests).toHaveLength(3);
+    expect(reviewRequests).toHaveLength(7);
+  });
+});
+
+describe('createLimiter', () => {
+  it('never runs more than maxConcurrent tasks at once', async () => {
+    const limit = createLimiter(3);
+    let active = 0;
+    let peak = 0;
+    const resolvers: (() => void)[] = [];
+
+    const task = () =>
+      limit(
+        () =>
+          new Promise<void>((resolve) => {
+            active++;
+            peak = Math.max(peak, active);
+            resolvers.push(() => {
+              active--;
+              resolve();
+            });
+          })
+      );
+
+    const tasks = Array.from({ length: 10 }, () => task());
+
+    // Let the microtask queue settle so every task has had a chance to either start or queue.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(peak).toBeLessThanOrEqual(3);
+    expect(active).toBe(3);
+
+    // Resolve queued tasks a few at a time and keep asserting the cap holds throughout.
+    while (resolvers.length > 0) {
+      resolvers.shift()!();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(peak).toBeLessThanOrEqual(3);
+    }
+
+    await Promise.all(tasks);
+    expect(active).toBe(0);
   });
 });

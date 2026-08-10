@@ -7,6 +7,35 @@ import { generateQuestions } from '@/lib/ai/generateQuestions';
 import { generateFromRandomPage } from '@/lib/quiz/generateFromRandomPage';
 import { curateVocab } from '@/lib/ai/curateVocab';
 
+const AI_CONCURRENCY_LIMIT = 6;
+
+/** Runs async tasks with at most `maxConcurrent` in flight at once. */
+export function createLimiter(maxConcurrent: number) {
+  let active = 0;
+  const queue: (() => void)[] = [];
+
+  function schedule() {
+    if (active >= maxConcurrent || queue.length === 0) return;
+    active++;
+    const run = queue.shift()!;
+    run();
+  }
+
+  return function limit<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      queue.push(() => {
+        fn()
+          .then(resolve, reject)
+          .finally(() => {
+            active--;
+            schedule();
+          });
+      });
+      schedule();
+    });
+  };
+}
+
 /** A question row built in memory, before a session id exists to attach it to. */
 interface PendingQuestion {
   book_id: string;
@@ -49,8 +78,12 @@ export function buildQuizGenerationRequests(
   quizWeights: Record<QuestionType, number>,
   rng: () => number = Math.random
 ): QuizGenerationRequest[] {
-  const progressTypes = pickWeightedTypes(quizWeights, QUESTIONS_PROGRESS_PER_BOOK, rng);
-  const reviewTypes = pickWeightedTypes(quizWeights, QUESTIONS_REVIEW_PER_BOOK, rng);
+  const rangeWidth = Math.max(1, range.endPage - range.startPage + 1);
+  const progressCount = Math.min(QUESTIONS_PROGRESS_PER_BOOK, rangeWidth);
+  const reviewCount = QUESTIONS_PROGRESS_PER_BOOK + QUESTIONS_REVIEW_PER_BOOK - progressCount;
+
+  const progressTypes = pickWeightedTypes(quizWeights, progressCount, rng);
+  const reviewTypes = pickWeightedTypes(quizWeights, reviewCount, rng);
 
   const progressRequests: QuizGenerationRequest[] = progressTypes.map((type) => ({
     type,
@@ -71,7 +104,8 @@ async function generateQuestionsForBook(
   book: any,
   essayBook: any,
   today: string,
-  weights: Record<string, number>
+  weights: Record<string, number>,
+  limit: <T>(fn: () => Promise<T>) => Promise<T>
 ): Promise<PendingQuestion[]> {
   const range = calculateDailyRange({
     totalPages: book.total_pages,
@@ -87,19 +121,22 @@ async function generateQuestionsForBook(
   ) as Record<(typeof QUIZ_TYPES)[number], number>;
   const quizRequests = buildQuizGenerationRequests(book, range, quizWeights as any);
 
-  // 5 questions are bounded to today's newly assigned pages (immediate check on what was just
-  // read); 5 are bounded to the whole textbook, including pages not yet reached, for broader
-  // retrieval practice. The two groups are pre-shuffled by buildQuizGenerationRequests so they
-  // render mixed together. Each question gets its own independently random page, and all of a
-  // book's questions (plus its essay question, if any) generate concurrently.
+  // Up to 5 questions are bounded to today's newly assigned pages (immediate check on what was
+  // just read); the rest are bounded to the whole textbook, including pages not yet reached,
+  // for broader retrieval practice. The two groups are pre-shuffled by
+  // buildQuizGenerationRequests so they render mixed together. Each question gets its own
+  // independently random page, and all of a book's questions (plus its essay question, if any)
+  // generate concurrently, subject to the shared `limit` concurrency cap.
   const quizGenerations = quizRequests.map((req) =>
-    generateFromRandomPage(supabase, aiClient, {
-      bookId: book.id,
-      bookName: book.name,
-      minPage: req.minPage,
-      maxPage: req.maxPage,
-      type: req.type,
-    })
+    limit(() =>
+      generateFromRandomPage(supabase, aiClient, {
+        bookId: book.id,
+        bookName: book.name,
+        minPage: req.minPage,
+        maxPage: req.maxPage,
+        type: req.type,
+      })
+    )
   );
 
   const essayGeneration =
@@ -195,12 +232,12 @@ export async function assembleDailySession(
   //
   // Each book's generation work (its quiz questions plus, for one book, the essay
   // question) runs concurrently — both across books and within a book — instead of
-  // sequentially. generateFromRandomPage now does two AI calls per question (generate +
-  // validate) with up to 3 retries each; run one-at-a-time across e.g. 3 books x 3
-  // questions, that easily exceeds a serverless function's execution time limit. Wall-clock
-  // time is now bounded by the single slowest call, not the sum of all of them.
+  // sequentially, but capped at AI_CONCURRENCY_LIMIT in-flight calls at once (shared across
+  // all books) so a day with several books and up to 10 quiz questions each doesn't burst
+  // past what the 60s serverless budget or Anthropic's rate limits can absorb.
+  const limit = createLimiter(AI_CONCURRENCY_LIMIT);
   const pendingQuestionsByBook = await Promise.all(
-    books.map((book: any) => generateQuestionsForBook(supabase, aiClient, book, essayBook, today, weights))
+    books.map((book: any) => generateQuestionsForBook(supabase, aiClient, book, essayBook, today, weights, limit))
   );
   const pendingQuestions: PendingQuestion[] = pendingQuestionsByBook.flat();
 

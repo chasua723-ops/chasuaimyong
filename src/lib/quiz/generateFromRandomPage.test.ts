@@ -184,6 +184,36 @@ describe('generateFromRandomPage', () => {
     ).rejects.toThrow('No page content found for question generation');
   });
 
+  it('bounds the fallback window to at most FALLBACK_WINDOW_PAGES pages even when [minPage, maxPage] spans an entire book', async () => {
+    const wideBookPages = Array.from({ length: 50 }, (_, i) => ({
+      book_id: 'b1',
+      page_num: i + 1,
+      content: `내용${i + 1}`,
+    }));
+    const supabase = createMockSupabase(baseTables({ book_pages: wideBookPages }));
+
+    // Every page 1-50 has content, so each single-page attempt finds a page and calls
+    // generateQuestions/validateQuestion successfully — but force validateQuestion to reject
+    // the first MAX_ATTEMPTS (6) of them, exhausting the single-page loop and falling through
+    // to the fallback. The persistent default mock (valid: true, set at vi.mock() factory
+    // time) then applies to the 7th call, which is the fallback's.
+    for (let i = 0; i < 6; i++) {
+      vi.mocked(validateQuestion).mockResolvedValueOnce({ valid: false, reason: '항상 무효' });
+    }
+
+    await generateFromRandomPage(supabase as any, {} as any, {
+      bookId: 'b1',
+      bookName: '전공중국어 문법',
+      maxPage: 50,
+      type: 'grammar',
+    });
+
+    // 7 total generateQuestions calls: 6 single-page misses (each invalidated) + 1 fallback.
+    const lastCall = vi.mocked(generateQuestions).mock.calls.at(-1)!;
+    expect(lastCall[1].pages.length).toBeLessThanOrEqual(15);
+    expect(lastCall[1].pages.length).toBeGreaterThan(0);
+  });
+
   it('never draws a page below minPage even when earlier pages exist in book_pages', async () => {
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01); // would resolve to page 1 without minPage
     const supabase = createMockSupabase(
