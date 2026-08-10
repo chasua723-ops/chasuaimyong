@@ -1,0 +1,20 @@
+.timer {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 16px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  position: sticky;
+  top: 8px;
+  z-index: 10;
+}
+
+.over {
+  color: var(--timer-over-color);
+  border-color: var(--timer-over-color);
+}
