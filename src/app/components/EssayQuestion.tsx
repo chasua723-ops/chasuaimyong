@@ -2,6 +2,7 @@
 
 import type { Question, EssayFeedback } from './types';
 import { containsChinese } from '@/lib/containsChinese';
+import HighlightedText from './HighlightedText';
 import styles from './session.module.css';
 
 interface EssayQuestionProps {
@@ -27,7 +28,7 @@ export default function EssayQuestion({
     <div className={styles.essayWrapper}>
       <span className={styles.essayBadge}>서술형</span>
       <p className={`${styles.essayPrompt}${containsChinese(question.prompt) ? ' zh' : ''}`}>
-        {question.prompt}
+        <HighlightedText text={question.prompt} />
       </p>
 
       <label className={styles.essayStepLabel} htmlFor={`ko-${question.id}`}>

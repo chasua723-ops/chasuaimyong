@@ -2,6 +2,7 @@
 
 import type { Question, QuizFeedback } from './types';
 import { containsChinese } from '@/lib/containsChinese';
+import HighlightedText from './HighlightedText';
 import styles from './session.module.css';
 
 interface QuizQuestionProps {
@@ -25,7 +26,7 @@ export default function QuizQuestion({
     <div className={overcome ? `${styles.questionCard} ${styles.questionCardOvercome}` : styles.questionCard}>
       <div className={styles.questionPromptRow}>
         <p className={`${styles.questionPrompt}${containsChinese(question.prompt) ? ' zh' : ''}`}>
-          Q{index}. {question.prompt}
+          Q{index}. <HighlightedText text={question.prompt} />
         </p>
         {overcome && <span className={styles.overcomeBadge}>극복됨</span>}
       </div>

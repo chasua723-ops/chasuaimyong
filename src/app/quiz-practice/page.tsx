@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { containsChinese } from '@/lib/containsChinese';
+import HighlightedText from '../components/HighlightedText';
 import styles from './quiz-practice.module.css';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -57,7 +58,9 @@ export default function QuizPracticePage() {
             <span className={styles.noteBook}>{note.bookName}</span>
             <span className={styles.noteType}>{TYPE_LABELS[note.type] ?? note.type}</span>
           </div>
-          <p className={`${styles.notePrompt}${containsChinese(note.prompt) ? ' zh' : ''}`}>{note.prompt}</p>
+          <p className={`${styles.notePrompt}${containsChinese(note.prompt) ? ' zh' : ''}`}>
+            <HighlightedText text={note.prompt} />
+          </p>
           <p className={styles.noteAnswer}>내 답: {note.userAnswer}</p>
           <p className={note.isCorrect ? styles.noteCorrect : styles.noteWrong}>
             {note.isCorrect ? '정답' : '오답'} · {note.sourcePage}페이지 참고
