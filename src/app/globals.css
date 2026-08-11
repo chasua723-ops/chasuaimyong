@@ -56,6 +56,9 @@ a {
   text-decoration: none;
 }
 
+/* !important: elements like <button> set font-family: inherit to escape the browser's
+   default UI font (see .choiceButton) — same specificity as this class, so without
+   !important, whichever rule is later in the bundle wins instead of .zh. */
 .zh {
-  font-family: 'Noto Sans SC', sans-serif;
+  font-family: 'Noto Sans SC', sans-serif !important;
 }
