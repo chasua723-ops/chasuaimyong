@@ -127,6 +127,14 @@ async function generateQuestionsForBook(
   // buildQuizGenerationRequests so they render mixed together. Each question gets its own
   // independently random page, and all of a book's questions (plus its essay question, if any)
   // generate concurrently, subject to the shared `limit` concurrency cap.
+  //
+  // generateFromRandomPage already retries hard internally (6 single-page attempts + a
+  // whole-range fallback) before giving up, so a single question failing here means that
+  // specific content was unusually unlucky (e.g. Claude emitting invalid JSON on every
+  // attempt) — not that anything is systemically broken. One such failure shouldn't cost the
+  // other ~39 questions across the other books, so it's caught and dropped rather than
+  // rejecting the whole Promise.all. assembleDailySession still refuses to persist a session
+  // with zero total questions.
   const quizGenerations = quizRequests.map((req) =>
     limit(() =>
       generateFromRandomPage(supabase, aiClient, {
@@ -136,26 +144,38 @@ async function generateQuestionsForBook(
         maxPage: req.maxPage,
         type: req.type,
       })
-    )
+    ).catch((err) => {
+      console.error(`[assembleDailySession] quiz question generation failed for "${book.name}", skipping it:`, err);
+      return null;
+    })
   );
 
+  // Mirrors the quiz path: generateEssayForBook already retries MAX_ESSAY_ATTEMPTS times
+  // internally. If it still fails, skip today's essay rather than failing the whole session.
   const essayGeneration =
-    book.id === essayBook.id ? generateEssayForBook(supabase, aiClient, book, range) : Promise.resolve([]);
+    book.id === essayBook.id
+      ? generateEssayForBook(supabase, aiClient, book, range).catch((err) => {
+          console.error(`[assembleDailySession] essay generation failed for "${book.name}", skipping it:`, err);
+          return [];
+        })
+      : Promise.resolve([]);
 
   const [quizResults, essayQuestions] = await Promise.all([
     Promise.all(quizGenerations),
     essayGeneration,
   ]);
 
-  const pendingQuestions: PendingQuestion[] = quizResults.map((generated) => ({
-    book_id: book.id,
-    type: generated.type,
-    source_page: generated.sourcePage,
-    prompt: generated.prompt,
-    choices: generated.choices ?? null,
-    correct_answer: generated.correctAnswer,
-    used_reference: generated.usedReference,
-  }));
+  const pendingQuestions: PendingQuestion[] = quizResults
+    .filter((generated): generated is NonNullable<typeof generated> => generated !== null)
+    .map((generated) => ({
+      book_id: book.id,
+      type: generated.type,
+      source_page: generated.sourcePage,
+      prompt: generated.prompt,
+      choices: generated.choices ?? null,
+      correct_answer: generated.correctAnswer,
+      used_reference: generated.usedReference,
+    }));
 
   return [...pendingQuestions, ...essayQuestions];
 }
@@ -241,9 +261,11 @@ export async function assembleDailySession(
   const dayIndex = Math.floor(new Date(today).getTime() / (1000 * 60 * 60 * 24));
   const essayBook = books[dayIndex % books.length];
 
-  // Everything that can throw (AI generation, curation) happens BEFORE the
-  // daily_sessions insert, so a partial failure leaves no session row behind and
-  // the next request retries from scratch instead of returning a dead session.
+  // Everything that can throw happens BEFORE the daily_sessions insert, so a failure leaves
+  // no session row behind and the next request retries from scratch instead of returning a
+  // dead session. Individual question/essay/vocab failures are caught and skipped rather than
+  // aborting everything (see the per-book generation below and the zero-questions guard after
+  // it) — only a total wipeout (nothing generated at all) still throws here.
   //
   // Each book's generation work (its quiz questions plus, for one book, the essay
   // question) runs concurrently — both across books and within a book — instead of
@@ -256,25 +278,38 @@ export async function assembleDailySession(
   );
   const pendingQuestions: PendingQuestion[] = pendingQuestionsByBook.flat();
 
+  // Individual question failures are already tolerated above; this is the floor — if literally
+  // nothing could be generated (every book, every question), that's not bad luck on one piece
+  // of content, it's a systemic problem, and there'd be nothing for the user to study anyway.
+  // Refuse to persist an empty session so the next request retries from scratch.
+  if (pendingQuestions.length === 0) {
+    throw new Error('All question generation failed; no questions available for today');
+  }
+
   const { data: existingVocab, error: existingVocabError } = await (supabase.from('vocab_of_the_day') as any)
     .select('*')
     .eq('date', today)
     .maybeSingle();
   if (existingVocabError) throw new Error(`Failed to fetch vocab of the day: ${existingVocabError.message}`);
 
+  // A missing vocab card is a minor cosmetic gap, not a reason to block the whole session.
   let pendingVocab: Record<string, unknown> | null = null;
   if (!existingVocab) {
     const { data: pastVocab, error: pastVocabError } = await (supabase.from('vocab_of_the_day') as any).select('word_zh');
     if (pastVocabError) throw new Error(`Failed to fetch past vocab: ${pastVocabError.message}`);
-    const vocab = await curateVocab(aiClient, (pastVocab ?? []).map((v: any) => v.word_zh));
-    pendingVocab = {
-      date: today,
-      word_zh: vocab.wordZh,
-      pinyin: vocab.pinyin,
-      meaning_ko: vocab.meaningKo,
-      example_zh: vocab.exampleZh,
-      example_ko: vocab.exampleKo,
-    };
+    try {
+      const vocab = await curateVocab(aiClient, (pastVocab ?? []).map((v: any) => v.word_zh));
+      pendingVocab = {
+        date: today,
+        word_zh: vocab.wordZh,
+        pinyin: vocab.pinyin,
+        meaning_ko: vocab.meaningKo,
+        example_zh: vocab.exampleZh,
+        example_ko: vocab.exampleKo,
+      };
+    } catch (err) {
+      console.error('[assembleDailySession] vocab curation failed, skipping today\'s vocab card:', err);
+    }
   }
 
   // Nothing above threw: now it is safe to persist the session and its content.

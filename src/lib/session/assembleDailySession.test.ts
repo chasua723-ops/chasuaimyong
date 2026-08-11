@@ -150,34 +150,70 @@ describe('assembleDailySession', () => {
     }
   });
 
-  it('inserts no daily_sessions row when question generation fails, so the day can be retried', async () => {
+  it('inserts no daily_sessions row when every question generation attempt fails, so the day can be retried', async () => {
     const supabase = createMockSupabase(baseTables);
-    // Quiz questions now generate concurrently (Promise.all across the book's 10 questions,
-    // rate-limited by the shared concurrency limiter), so a few queued mockRejectedValueOnce
-    // calls would be consumed unpredictably across those concurrent retry loops and might not
-    // exhaust any single one of them. Reject unconditionally instead — safe because beforeEach
-    // resets the mock's implementation before every test, so this doesn't leak into later tests.
+    // Individual question/essay failures are now caught and skipped (see the tests below) —
+    // this test exercises the floor: when literally nothing could be generated (every quiz
+    // question and the essay all fail, for every book), that's not bad luck on one piece of
+    // content, it's systemic, and assembleDailySession refuses to persist an empty session.
     vi.mocked(generateQuestions).mockRejectedValue(new Error('Claude blew up'));
 
     await expect(
       assembleDailySession(supabase as any, {} as any, '2026-08-03')
-    ).rejects.toThrow('Claude blew up');
+    ).rejects.toThrow('All question generation failed');
 
     expect(supabase.inserted.daily_sessions).toBeUndefined();
     expect(supabase.inserted.questions).toBeUndefined();
     expect(supabase.inserted.vocab_of_the_day).toBeUndefined();
   });
 
-  it('inserts no daily_sessions row when vocab curation fails', async () => {
+  it('still creates the session when vocab curation fails, just without a vocab card', async () => {
     const supabase = createMockSupabase(baseTables);
     vi.mocked(curateVocab).mockRejectedValueOnce(new Error('vocab blew up'));
 
-    await expect(
-      assembleDailySession(supabase as any, {} as any, '2026-08-03')
-    ).rejects.toThrow('vocab blew up');
+    const session = await assembleDailySession(supabase as any, {} as any, '2026-08-03');
 
-    expect(supabase.inserted.daily_sessions).toBeUndefined();
-    expect(supabase.inserted.questions).toBeUndefined();
+    expect(session).toBeTruthy();
+    expect(supabase.inserted.questions?.length).toBeGreaterThan(0);
+    expect(supabase.inserted.vocab_of_the_day).toBeUndefined();
+  });
+
+  it("skips a book whose quiz/essay generation fails entirely, but still creates a session from the other books' questions", async () => {
+    const failingBook = baseTables.books[0]; // '문법', id 'b1'
+    const okBook = {
+      id: 'b2',
+      name: '문학개론',
+      total_pages: 100,
+      exam_date: '2026-12-01',
+      target_read_count: 3,
+      current_read_count: 1,
+      current_page: 1,
+    };
+    const supabase = createMockSupabase({
+      ...baseTables,
+      books: [failingBook, okBook],
+      book_pages: [
+        ...baseTables.book_pages,
+        ...Array.from({ length: 100 }, (_, i) => ({ book_id: 'b2', page_num: i + 1, content: `내용${i + 1}` })),
+      ],
+    });
+    vi.mocked(generateQuestions).mockImplementation(async (_client: any, input: any) => {
+      if (input.bookName === failingBook.name) {
+        throw new Error('Claude blew up for this book only');
+      }
+      if (input.types.includes('essay')) {
+        return [{ type: 'essay', sourcePage: 3, prompt: '서술형 문제', correctAnswer: '모범답안' }];
+      }
+      return [{ type: 'grammar', sourcePage: 3, prompt: 'q', correctAnswer: 'a' }];
+    });
+
+    const session = await assembleDailySession(supabase as any, {} as any, '2026-08-03');
+
+    expect(session).toBeTruthy();
+    const questionsForFailingBook = supabase.inserted.questions.filter((q: any) => q.book_id === 'b1');
+    const questionsForOkBook = supabase.inserted.questions.filter((q: any) => q.book_id === 'b2');
+    expect(questionsForFailingBook).toHaveLength(0);
+    expect(questionsForOkBook.length).toBeGreaterThan(0);
   });
 
   it('adds exactly one essay question, and only for the book assigned to today\'s essay slot', async () => {
