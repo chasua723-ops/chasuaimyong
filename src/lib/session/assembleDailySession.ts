@@ -160,6 +160,8 @@ async function generateQuestionsForBook(
   return [...pendingQuestions, ...essayQuestions];
 }
 
+const MAX_ESSAY_ATTEMPTS = 3;
+
 async function generateEssayForBook(
   supabase: SupabaseClient,
   aiClient: Anthropic,
@@ -180,21 +182,34 @@ async function generateEssayForBook(
   const clampPage = (page: number) =>
     Math.min(Math.max(Number(page) || range.startPage, range.startPage), range.endPage);
 
-  const essayGenerated = await generateQuestions(aiClient, {
-    bookName: book.name,
-    pages: pageRange,
-    types: ['essay'],
-  });
+  // Unlike the quiz path (generateFromRandomPage), there's only one essay question per day,
+  // with no built-in retry — a single bad response (e.g. Claude emitting an unescaped quote
+  // inside a JSON string, which fails parseJsonResponse) used to throw immediately and take
+  // down the whole day's session, including every other book's already-successful questions.
+  let lastError: unknown;
+  for (let attempt = 0; attempt < MAX_ESSAY_ATTEMPTS; attempt++) {
+    try {
+      const essayGenerated = await generateQuestions(aiClient, {
+        bookName: book.name,
+        pages: pageRange,
+        types: ['essay'],
+      });
 
-  return essayGenerated.map((q) => ({
-    book_id: book.id,
-    type: 'essay' as const,
-    source_page: clampPage(q.sourcePage),
-    prompt: q.prompt,
-    choices: null,
-    correct_answer: q.correctAnswer,
-    used_reference: false,
-  }));
+      return essayGenerated.map((q) => ({
+        book_id: book.id,
+        type: 'essay' as const,
+        source_page: clampPage(q.sourcePage),
+        prompt: q.prompt,
+        choices: null,
+        correct_answer: q.correctAnswer,
+        used_reference: false,
+      }));
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Failed to generate essay question');
 }
 
 export async function assembleDailySession(

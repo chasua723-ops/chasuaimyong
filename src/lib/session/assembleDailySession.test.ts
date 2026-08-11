@@ -189,6 +189,27 @@ describe('assembleDailySession', () => {
     expect(essayQuestions).toHaveLength(1);
     expect(essayQuestions[0].book_id).toBe('b1');
   });
+
+  it('retries essay generation after a transient failure (e.g. malformed JSON) instead of failing the whole session', async () => {
+    const supabase = createMockSupabase(baseTables);
+    let essayAttempts = 0;
+    vi.mocked(generateQuestions).mockImplementation(async (_client: any, input: any) => {
+      if (input.types.includes('essay')) {
+        essayAttempts++;
+        if (essayAttempts === 1) {
+          throw new Error('Failed to parse JSON from Claude response: {"type":"essay"...');
+        }
+        return [{ type: 'essay', sourcePage: 3, prompt: '서술형 문제', correctAnswer: '모범답안' }];
+      }
+      return [{ type: 'grammar', sourcePage: 3, prompt: 'q', correctAnswer: 'a' }];
+    });
+
+    await assembleDailySession(supabase as any, {} as any, '2026-08-03');
+
+    expect(essayAttempts).toBeGreaterThanOrEqual(2);
+    const essayQuestions = supabase.inserted.questions.filter((q: any) => q.type === 'essay');
+    expect(essayQuestions).toHaveLength(1);
+  });
 });
 
 describe('shuffle', () => {
