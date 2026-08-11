@@ -31,6 +31,7 @@ const baseNotes = [
     bookName: '문학개론',
     koreanDraft: '',
     chineseAnswer: '鲁迅用现实主义手法...',
+    modelAnswer: '鲁迅文学的特点是深刻的现实主义批判精神。',
     conceptScore: 3,
     conceptChecklist: [
       { concept: '사실주의 기법', covered: true },
@@ -76,6 +77,17 @@ describe('Essay notes page', () => {
     expect(await screen.findByText(/鲁迅文学的特点是什么/)).toBeInTheDocument();
     expect(screen.getByText('3/4점')).toBeInTheDocument();
     expect(screen.getByText(/사실주의 기법/)).toBeInTheDocument();
+  });
+
+  it("shows the user's own answer alongside the model answer for a past attempt", async () => {
+    render(<EssayNotesPage />);
+
+    await screen.findByText(/鲁迅文学的特点是什么/);
+
+    expect(screen.getByText('내가 쓴 답안')).toBeInTheDocument();
+    expect(screen.getByText(/鲁迅用现实主义手法/)).toBeInTheDocument();
+    expect(screen.getByText('모범답안')).toBeInTheDocument();
+    expect(screen.getByText(/深刻的现实主义批判精神/)).toBeInTheDocument();
   });
 
   it('shows an empty state when there are no past attempts', async () => {

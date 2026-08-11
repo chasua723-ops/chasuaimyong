@@ -15,7 +15,9 @@ describe('getEssayNotes', () => {
   it('returns an essay attempt with its concept checklist and book name', async () => {
     const supabase = createMockSupabase(
       baseTables({
-        questions: [{ id: 'q1', book_id: 'b1', prompt: '鲁迅文学的特点是什么？' }],
+        questions: [
+          { id: 'q1', book_id: 'b1', prompt: '鲁迅文学的特点是什么？', correct_answer: '모범답안 내용' },
+        ],
         attempts: [
           {
             id: 'a1',
@@ -44,6 +46,7 @@ describe('getEssayNotes', () => {
       questionPrompt: '鲁迅文学的特点是什么？',
       bookName: '문학개론',
       conceptScore: 3,
+      modelAnswer: '모범답안 내용',
     });
   });
 

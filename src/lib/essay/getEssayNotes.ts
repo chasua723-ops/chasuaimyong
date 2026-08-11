@@ -7,6 +7,7 @@ export interface EssayNote {
   bookName: string;
   koreanDraft: string;
   chineseAnswer: string;
+  modelAnswer: string;
   conceptScore: number;
   conceptChecklist: ConceptCheck[];
   grammarCorrections: GrammarCorrection[];
@@ -40,6 +41,7 @@ export async function getEssayNotes(supabase: SupabaseClient): Promise<EssayNote
       bookName,
       koreanDraft: attempt.korean_draft ?? '',
       chineseAnswer: attempt.chinese_answer ?? '',
+      modelAnswer: question.correct_answer ?? '',
       conceptScore: attempt.concept_score,
       conceptChecklist: attempt.concept_checklist ?? [],
       grammarCorrections: attempt.grammar_corrections ?? [],

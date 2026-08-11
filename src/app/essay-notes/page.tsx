@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import EssayQuestion from '../components/EssayQuestion';
+import { containsChinese } from '@/lib/containsChinese';
 import type { EssayFeedback } from '../components/types';
 import styles from './essay-notes.module.css';
 
@@ -14,6 +15,8 @@ interface EssayNote {
   id: string;
   questionPrompt: string;
   bookName: string;
+  chineseAnswer: string;
+  modelAnswer: string;
   conceptScore: number;
   conceptChecklist: ConceptCheck[];
 }
@@ -197,6 +200,26 @@ export default function EssayNotesPage() {
               </li>
             ))}
           </ul>
+          {(note.chineseAnswer || note.modelAnswer) && (
+            <div className={styles.answerCompare}>
+              {note.chineseAnswer && (
+                <div>
+                  <p className={styles.answerLabel}>내가 쓴 답안</p>
+                  <p className={`${styles.answerText}${containsChinese(note.chineseAnswer) ? ' zh' : ''}`}>
+                    {note.chineseAnswer}
+                  </p>
+                </div>
+              )}
+              {note.modelAnswer && (
+                <div>
+                  <p className={styles.modelAnswerLabel}>모범답안</p>
+                  <p className={`${styles.modelAnswerText}${containsChinese(note.modelAnswer) ? ' zh' : ''}`}>
+                    {note.modelAnswer}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ))}
     </main>
