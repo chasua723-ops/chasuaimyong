@@ -7,7 +7,7 @@ import { generateQuestions } from '@/lib/ai/generateQuestions';
 import { generateFromRandomPage } from '@/lib/quiz/generateFromRandomPage';
 import { curateVocab } from '@/lib/ai/curateVocab';
 
-const AI_CONCURRENCY_LIMIT = 6;
+const AI_CONCURRENCY_LIMIT = 15;
 
 /** Runs async tasks with at most `maxConcurrent` in flight at once. */
 export function createLimiter(maxConcurrent: number) {
