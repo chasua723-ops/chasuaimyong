@@ -33,6 +33,14 @@ function pickChoiceQuestionStyle(): string {
   return CHOICE_QUESTION_STYLES[Math.floor(Math.random() * CHOICE_QUESTION_STYLES.length)];
 }
 
+// Real 임용고시 past papers sometimes phrase the objective-question prompt itself in Chinese,
+// not just Korean. Mix that in some of the time instead of always asking in Korean.
+const CHINESE_PROMPT_PROBABILITY = 0.3;
+
+function shouldUseChinesePrompt(): boolean {
+  return Math.random() < CHINESE_PROMPT_PROBABILITY;
+}
+
 export async function generateQuestions(
   client: Anthropic,
   input: QuestionGenInput
@@ -49,13 +57,17 @@ export async function generateQuestions(
     ? `\n\n객관식(5지선다) 문제는 반드시 다음 형식으로 출제하세요: ${pickChoiceQuestionStyle()}. ` +
       `매번 같은 형식("옳지 않은 것을 고르시오")만 반복하지 말고, 지정된 형식을 따르세요.`
     : '';
+  const chinesePromptInstruction = hasChoiceType && shouldUseChinesePrompt()
+    ? '\n\n이번 문제는 prompt(질문 문장) 자체를 중국어로 작성하세요 (실제 임용고시 기출문제는 질문 자체가 ' +
+      '중국어로 제시되는 경우도 있습니다). choices와 correctAnswer는 평소와 동일한 언어 규칙을 따르세요.'
+    : '';
 
   const prompt =
     `다음은 "${input.bookName}" 교재의 일부 발췌입니다. 이 내용만을 근거로 ` +
     `${input.types.join(', ')} 유형의 문제를 각 1개씩 만들어주세요. ` +
     `각 문제는 반드시 아래 JSON 배열 형식으로만 응답하세요:\n` +
     `[{"type":"grammar","sourcePage":12,"prompt":"...","choices":["...","..."],"correctAnswer":"..."}]\n\n` +
-    `교재 발췌:\n${pageText}${referenceText}${essayInstruction}${styleInstruction}`;
+    `교재 발췌:\n${pageText}${referenceText}${essayInstruction}${styleInstruction}${chinesePromptInstruction}`;
 
   const raw = await askClaude(client, prompt, {
     system:

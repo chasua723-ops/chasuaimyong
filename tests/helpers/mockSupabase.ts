@@ -32,6 +32,22 @@ export function createMockSupabase(tables: TableData) {
         rows = rows.filter((r) => String(r[col]).includes(needle));
         return api;
       },
+      // Minimal support for Postgrest's `.or('col.ilike.%x%,col.ilike.%y%')` filter-string
+      // syntax — only the operators this codebase actually uses (ilike, eq).
+      or: (filterString: string) => {
+        const conditions = filterString.split(',').map((clause) => {
+          const [col, op, ...rest] = clause.split('.');
+          return { col, op, val: rest.join('.') };
+        });
+        rows = rows.filter((r) =>
+          conditions.some(({ col, op, val }) => {
+            if (op === 'ilike') return String(r[col]).includes(val.replace(/%/g, ''));
+            if (op === 'eq') return String(r[col]) === val;
+            return false;
+          })
+        );
+        return api;
+      },
       limit: (n: number) => {
         rows = rows.slice(0, n);
         return api;

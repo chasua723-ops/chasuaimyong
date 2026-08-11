@@ -83,6 +83,15 @@ export async function generateFromRandomPage(
       .ilike('name', '%독해%')
       .limit(2);
     referenceExcerpts = (refs ?? []).map((r: any) => r.content);
+  } else if (input.type === 'theory') {
+    // Of the 6 ingested 기출문제 reference materials, only the "독해" ones were ever pulled
+    // in above — 이론편기출문제1/이론기출문제1 (전공이론 기출) and 교과교육학기출문제집 (about
+    // 10% of the real exam) were ingested but never referenced by any generation path.
+    const { data: refs } = await (supabase.from('reference_materials') as any)
+      .select('content')
+      .or('name.ilike.%이론%,name.ilike.%교과교육학%')
+      .limit(2);
+    referenceExcerpts = (refs ?? []).map((r: any) => r.content);
   }
 
   let lastError: unknown;

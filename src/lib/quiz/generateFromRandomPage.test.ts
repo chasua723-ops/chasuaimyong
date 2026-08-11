@@ -60,7 +60,7 @@ describe('generateFromRandomPage', () => {
     randomSpy.mockRestore();
   });
 
-  it('does not fetch reference excerpts for non-reading types', async () => {
+  it('does not fetch reference excerpts for non-reading, non-theory types', async () => {
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.4);
     const supabase = createMockSupabase(
       baseTables({ reference_materials: [{ name: '독해 기출', content: '기출 내용' }] })
@@ -75,6 +75,30 @@ describe('generateFromRandomPage', () => {
 
     const lastCall = vi.mocked(generateQuestions).mock.calls.at(-1)!;
     expect(lastCall[1].referenceExcerpts).toBeUndefined();
+    randomSpy.mockRestore();
+  });
+
+  it('fetches reference excerpts from 이론/교과교육학 materials when type is theory', async () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.4);
+    const supabase = createMockSupabase(
+      baseTables({
+        reference_materials: [
+          { name: '이론편기출문제1', content: '이론 기출 내용' },
+          { name: '교과교육학기출문제집', content: '교과교육학 기출 내용' },
+          { name: '독해기출특강', content: '독해 기출 내용' },
+        ],
+      })
+    );
+
+    await generateFromRandomPage(supabase as any, {} as any, {
+      bookId: 'b1',
+      bookName: '교육학',
+      maxPage: 10,
+      type: 'theory',
+    });
+
+    const lastCall = vi.mocked(generateQuestions).mock.calls.at(-1)!;
+    expect(lastCall[1].referenceExcerpts).toEqual(['이론 기출 내용', '교과교육학 기출 내용']);
     randomSpy.mockRestore();
   });
 
