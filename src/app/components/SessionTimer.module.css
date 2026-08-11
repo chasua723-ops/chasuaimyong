@@ -1,7 +1,21 @@
+/*
+ * position: sticky doesn't reliably follow scroll here (body is a flex column — a known
+ * iOS Safari sticky-in-flex quirk), so the badge is position: fixed to the viewport instead.
+ * .spacer reserves the vertical space it would otherwise have occupied in normal flow, so
+ * fixed positioning doesn't make the first BookSection jump up underneath it.
+ */
+.spacer {
+  height: 48px;
+}
+
 .timer {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
   display: block;
   width: fit-content;
-  margin: 0 auto 16px;
   padding: 4px 12px;
   border-radius: 999px;
   background: var(--card-background);
@@ -9,9 +23,6 @@
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
-  position: sticky;
-  top: 8px;
-  z-index: 10;
 }
 
 .over {

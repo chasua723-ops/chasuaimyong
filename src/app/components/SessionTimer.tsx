@@ -29,8 +29,10 @@ export default function SessionTimer({ startedAt }: SessionTimerProps) {
   const overTarget = elapsedMs > TARGET_MS;
 
   return (
-    <div className={`${styles.timer} ${overTarget ? styles.over : ''}`}>
-      {formatElapsed(elapsedMs)} / {formatElapsed(TARGET_MS)}
+    <div className={styles.spacer}>
+      <div className={`${styles.timer} ${overTarget ? styles.over : ''}`}>
+        {formatElapsed(elapsedMs)} / {formatElapsed(TARGET_MS)}
+      </div>
     </div>
   );
 }
