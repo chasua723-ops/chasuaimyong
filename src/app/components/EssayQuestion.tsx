@@ -13,6 +13,7 @@ interface EssayQuestionProps {
   onKoreanChange: (value: string) => void;
   onChineseChange: (value: string) => void;
   onSubmit: () => void;
+  submitting?: boolean;
 }
 
 export default function EssayQuestion({
@@ -23,7 +24,9 @@ export default function EssayQuestion({
   onKoreanChange,
   onChineseChange,
   onSubmit,
+  submitting = false,
 }: EssayQuestionProps) {
+  const disabled = submitting || feedback !== undefined;
   return (
     <div className={styles.essayWrapper}>
       <span className={styles.essayBadge}>서술형</span>
@@ -51,7 +54,7 @@ export default function EssayQuestion({
         onChange={(e) => onChineseChange(e.target.value)}
       />
 
-      <button className={styles.essaySubmitButton} onClick={onSubmit}>
+      <button className={styles.essaySubmitButton} onClick={onSubmit} disabled={disabled}>
         제출
       </button>
 

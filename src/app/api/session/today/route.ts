@@ -32,6 +32,17 @@ async function handleGet() {
     .eq('session_id', session.id);
   if (questionsError) throw new Error(`Failed to fetch questions: ${questionsError.message}`);
 
+  const questionIds = (questions ?? []).map((q: any) => q.id);
+  let attempts: any[] = [];
+  if (questionIds.length > 0) {
+    const { data: attemptRows, error: attemptsError } = await supabase
+      .from('attempts')
+      .select('*')
+      .in('question_id', questionIds);
+    if (attemptsError) throw new Error(`Failed to fetch attempts: ${attemptsError.message}`);
+    attempts = attemptRows ?? [];
+  }
+
   const { data: vocab, error: vocabError } = await supabase
     .from('vocab_of_the_day')
     .select('*')
@@ -53,5 +64,5 @@ async function handleGet() {
     return { bookId: b.id, name: b.name, startPage: range.startPage, endPage: range.endPage };
   });
 
-  return NextResponse.json({ session, questions: questions ?? [], vocab, bookRanges });
+  return NextResponse.json({ session, questions: questions ?? [], attempts, vocab, bookRanges });
 }

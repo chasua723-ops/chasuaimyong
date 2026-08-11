@@ -17,6 +17,8 @@ export default function Page() {
   const [essayFeedback, setEssayFeedback] = useState<Record<string, EssayFeedback>>({});
   const [koreanDrafts, setKoreanDrafts] = useState<Record<string, string>>({});
   const [chineseAnswers, setChineseAnswers] = useState<Record<string, string>>({});
+  const [quizSubmitting, setQuizSubmitting] = useState<Record<string, boolean>>({});
+  const [essaySubmitting, setEssaySubmitting] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -25,7 +27,48 @@ export default function Page() {
         const res = await fetch('/api/session/today');
         if (!res.ok) throw new Error(`session request failed: ${res.status}`);
         const json = (await res.json()) as SessionData;
-        if (!cancelled) setData(json);
+        if (cancelled) return;
+
+        setData(json);
+
+        const questionById = new Map(json.questions.map((q) => [q.id, q]));
+        const quizFeedbackInit: Record<string, QuizFeedback> = {};
+        const essayFeedbackInit: Record<string, EssayFeedback> = {};
+        const koreanDraftsInit: Record<string, string> = {};
+        const chineseAnswersInit: Record<string, string> = {};
+
+        for (const attempt of json.attempts ?? []) {
+          const question = questionById.get(attempt.question_id);
+          if (!question) continue;
+
+          if (question.type === 'essay') {
+            koreanDraftsInit[attempt.question_id] = attempt.korean_draft ?? '';
+            chineseAnswersInit[attempt.question_id] = attempt.chinese_answer ?? '';
+            if (attempt.concept_score !== null) {
+              essayFeedbackInit[attempt.question_id] = {
+                conceptScore: attempt.concept_score,
+                conceptChecklist: attempt.concept_checklist ?? [],
+                grammarCorrections: attempt.grammar_corrections ?? [],
+              };
+            }
+          } else if (attempt.is_correct !== null) {
+            quizFeedbackInit[attempt.question_id] = attempt.is_correct
+              ? 'correct'
+              : { explanation: attempt.explanation ?? '', sourcePage: question.source_page };
+          }
+        }
+
+        setQuizFeedback(quizFeedbackInit);
+        setEssayFeedback(essayFeedbackInit);
+        setKoreanDrafts(koreanDraftsInit);
+        setChineseAnswers(chineseAnswersInit);
+        if (json.attempts && json.attempts.length > 0) {
+          setStarted(true);
+          const earliest = Math.min(
+            ...json.attempts.map((a) => new Date(a.created_at).getTime())
+          );
+          setStartedAt(earliest);
+        }
       } catch (err) {
         console.error(err);
         if (!cancelled) setError('오늘 학습 콘텐츠를 불러오지 못했어요. 새로고침 해주세요.');
@@ -37,32 +80,42 @@ export default function Page() {
   }, []);
 
   async function submitAnswer(questionId: string, userAnswer: string) {
-    const res = await fetch('/api/attempts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId, userAnswer }),
-    });
-    const result = await res.json();
-    setQuizFeedback((prev) => ({
-      ...prev,
-      [questionId]: result.isCorrect
-        ? 'correct'
-        : { explanation: result.explanation, sourcePage: result.sourcePage },
-    }));
+    setQuizSubmitting((prev) => ({ ...prev, [questionId]: true }));
+    try {
+      const res = await fetch('/api/attempts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId, userAnswer }),
+      });
+      const result = await res.json();
+      setQuizFeedback((prev) => ({
+        ...prev,
+        [questionId]: result.isCorrect
+          ? 'correct'
+          : { explanation: result.explanation, sourcePage: result.sourcePage },
+      }));
+    } finally {
+      setQuizSubmitting((prev) => ({ ...prev, [questionId]: false }));
+    }
   }
 
   async function submitEssay(questionId: string) {
-    const res = await fetch('/api/attempts/essay', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        questionId,
-        koreanDraft: koreanDrafts[questionId] ?? '',
-        chineseAnswer: chineseAnswers[questionId] ?? '',
-      }),
-    });
-    const result = await res.json();
-    setEssayFeedback((prev) => ({ ...prev, [questionId]: result }));
+    setEssaySubmitting((prev) => ({ ...prev, [questionId]: true }));
+    try {
+      const res = await fetch('/api/attempts/essay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId,
+          koreanDraft: koreanDrafts[questionId] ?? '',
+          chineseAnswer: chineseAnswers[questionId] ?? '',
+        }),
+      });
+      const result = await res.json();
+      setEssayFeedback((prev) => ({ ...prev, [questionId]: result }));
+    } finally {
+      setEssaySubmitting((prev) => ({ ...prev, [questionId]: false }));
+    }
   }
 
   if (error) return <p className={styles.page}>{error}</p>;
@@ -100,10 +153,12 @@ export default function Page() {
             quizQuestions={quizQuestions}
             essayQuestion={essayQuestion}
             quizFeedback={quizFeedback}
+            quizSubmitting={quizSubmitting}
             onSubmitQuiz={submitAnswer}
             koreanDraft={essayQuestion ? koreanDrafts[essayQuestion.id] ?? '' : ''}
             chineseAnswer={essayQuestion ? chineseAnswers[essayQuestion.id] ?? '' : ''}
             essayFeedback={essayQuestion ? essayFeedback[essayQuestion.id] : undefined}
+            essaySubmitting={essayQuestion ? essaySubmitting[essayQuestion.id] ?? false : false}
             onKoreanChange={(value) =>
               essayQuestion && setKoreanDrafts((prev) => ({ ...prev, [essayQuestion.id]: value }))
             }

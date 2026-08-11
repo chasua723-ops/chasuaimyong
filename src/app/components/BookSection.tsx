@@ -33,10 +33,12 @@ interface BookSectionProps {
   quizQuestions: Question[];
   essayQuestion: Question | undefined;
   quizFeedback: Record<string, QuizFeedback>;
+  quizSubmitting?: Record<string, boolean>;
   onSubmitQuiz: (questionId: string, answer: string) => void;
   koreanDraft: string;
   chineseAnswer: string;
   essayFeedback: EssayFeedback | undefined;
+  essaySubmitting?: boolean;
   onKoreanChange: (value: string) => void;
   onChineseChange: (value: string) => void;
   onSubmitEssay: () => void;
@@ -50,16 +52,19 @@ export default function BookSection({
   quizQuestions,
   essayQuestion,
   quizFeedback,
+  quizSubmitting = {},
   onSubmitQuiz,
   koreanDraft,
   chineseAnswer,
   essayFeedback,
+  essaySubmitting = false,
   onKoreanChange,
   onChineseChange,
   onSubmitEssay,
 }: BookSectionProps) {
   const [practiceQuestions, setPracticeQuestions] = useState<PracticeQuestion[]>([]);
   const [practiceFeedback, setPracticeFeedback] = useState<Record<string, QuizFeedback>>({});
+  const [practiceSubmitting, setPracticeSubmitting] = useState<Record<string, boolean>>({});
   const [generating, setGenerating] = useState(false);
   const [practiceError, setPracticeError] = useState<string | null>(null);
   const [range, setRange] = useState({ startPage, endPage });
@@ -110,18 +115,23 @@ export default function BookSection({
   }
 
   async function submitPracticeAnswer(questionId: string, answer: string) {
-    const res = await fetch('/api/attempts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId, userAnswer: answer }),
-    });
-    const result = await res.json();
-    setPracticeFeedback((prev) => ({
-      ...prev,
-      [questionId]: result.isCorrect
-        ? 'correct'
-        : { explanation: result.explanation, sourcePage: result.sourcePage },
-    }));
+    setPracticeSubmitting((prev) => ({ ...prev, [questionId]: true }));
+    try {
+      const res = await fetch('/api/attempts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId, userAnswer: answer }),
+      });
+      const result = await res.json();
+      setPracticeFeedback((prev) => ({
+        ...prev,
+        [questionId]: result.isCorrect
+          ? 'correct'
+          : { explanation: result.explanation, sourcePage: result.sourcePage },
+      }));
+    } finally {
+      setPracticeSubmitting((prev) => ({ ...prev, [questionId]: false }));
+    }
   }
 
   return (
@@ -135,7 +145,15 @@ export default function BookSection({
       </div>
 
       {quizQuestions.map((q, i) => (
-        <QuizQuestion key={q.id} question={q} index={i + 1} feedback={quizFeedback[q.id]} onSubmit={onSubmitQuiz} />
+        <QuizQuestion
+          key={q.id}
+          question={q}
+          index={i + 1}
+          feedback={quizFeedback[q.id]}
+          onSubmit={onSubmitQuiz}
+          submitting={quizSubmitting[q.id] ?? false}
+          lockAfterAnswer
+        />
       ))}
 
       {practiceQuestions.map((q, i) => (
@@ -152,6 +170,8 @@ export default function BookSection({
           index={quizQuestions.length + i + 1}
           feedback={practiceFeedback[q.id]}
           onSubmit={submitPracticeAnswer}
+          submitting={practiceSubmitting[q.id] ?? false}
+          lockAfterAnswer
         />
       ))}
 
@@ -170,6 +190,7 @@ export default function BookSection({
           onKoreanChange={onKoreanChange}
           onChineseChange={onChineseChange}
           onSubmit={onSubmitEssay}
+          submitting={essaySubmitting}
         />
       )}
 

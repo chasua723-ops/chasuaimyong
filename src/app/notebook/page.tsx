@@ -28,6 +28,7 @@ export default function NotebookPage() {
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, QuizFeedback>>({});
   const [overcomeOverrides, setOvercomeOverrides] = useState<Record<string, boolean>>({});
+  const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -48,20 +49,25 @@ export default function NotebookPage() {
   }, []);
 
   async function submitAnswer(questionId: string, userAnswer: string) {
-    const res = await fetch('/api/attempts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questionId, userAnswer }),
-    });
-    const result = await res.json();
-    setFeedback((prev) => ({
-      ...prev,
-      [questionId]: result.isCorrect
-        ? 'correct'
-        : { explanation: result.explanation, sourcePage: result.sourcePage },
-    }));
-    if (result.isCorrect) {
-      setOvercomeOverrides((prev) => ({ ...prev, [questionId]: true }));
+    setSubmitting((prev) => ({ ...prev, [questionId]: true }));
+    try {
+      const res = await fetch('/api/attempts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId, userAnswer }),
+      });
+      const result = await res.json();
+      setFeedback((prev) => ({
+        ...prev,
+        [questionId]: result.isCorrect
+          ? 'correct'
+          : { explanation: result.explanation, sourcePage: result.sourcePage },
+      }));
+      if (result.isCorrect) {
+        setOvercomeOverrides((prev) => ({ ...prev, [questionId]: true }));
+      }
+    } finally {
+      setSubmitting((prev) => ({ ...prev, [questionId]: false }));
     }
   }
 
@@ -106,6 +112,7 @@ export default function NotebookPage() {
                 onSubmit={submitAnswer}
                 overcome={overcomeOverrides[q.id] ?? q.overcome}
                 attemptCount={overcomeOverrides[q.id] ? q.attemptCount + 1 : q.attemptCount}
+                submitting={submitting[q.id] ?? false}
               />
             ))}
           </section>

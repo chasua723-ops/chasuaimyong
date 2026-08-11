@@ -12,6 +12,8 @@ interface QuizQuestionProps {
   onSubmit: (questionId: string, answer: string) => void;
   overcome?: boolean;
   attemptCount?: number;
+  submitting?: boolean;
+  lockAfterAnswer?: boolean;
 }
 
 export default function QuizQuestion({
@@ -21,7 +23,10 @@ export default function QuizQuestion({
   onSubmit,
   overcome = false,
   attemptCount,
+  submitting = false,
+  lockAfterAnswer = false,
 }: QuizQuestionProps) {
+  const disabled = overcome || submitting || (lockAfterAnswer && feedback !== undefined);
   return (
     <div className={overcome ? `${styles.questionCard} ${styles.questionCardOvercome}` : styles.questionCard}>
       <div className={styles.questionPromptRow}>
@@ -35,7 +40,7 @@ export default function QuizQuestion({
           <button
             key={choice}
             className={`${styles.choiceButton}${containsChinese(choice) ? ' zh' : ''}`}
-            disabled={overcome}
+            disabled={disabled}
             onClick={() => onSubmit(question.id, choice)}
           >
             <HighlightedText text={choice} />

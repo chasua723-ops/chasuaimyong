@@ -21,9 +21,23 @@ export interface BookRange {
   endPage: number;
 }
 
+export interface Attempt {
+  question_id: string;
+  created_at: string;
+  user_answer: string | null;
+  is_correct: boolean | null;
+  explanation: string | null;
+  korean_draft: string | null;
+  chinese_answer: string | null;
+  concept_score: number | null;
+  concept_checklist: ConceptCheck[] | null;
+  grammar_corrections: GrammarCorrection[] | null;
+}
+
 export interface SessionData {
   session: { id: string; essay_book_id: string };
   questions: Question[];
+  attempts: Attempt[];
   vocab: Vocab | null;
   bookRanges: BookRange[];
 }

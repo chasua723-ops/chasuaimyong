@@ -30,6 +30,7 @@ beforeEach(() => {
                 source_page: 30,
               },
             ],
+            attempts: [],
             vocab: { word_zh: '内卷', pinyin: 'nèijuǎn', meaning_ko: '내권' },
             bookRanges: [{ bookId: 'b1', name: '문법', startPage: 1, endPage: 10 }],
           }),
@@ -166,6 +167,7 @@ describe('Daily session page', () => {
                   source_page: 41,
                 },
               ],
+              attempts: [],
               vocab: { word_zh: '内卷', pinyin: 'nèijuǎn', meaning_ko: '내권' },
               bookRanges: [
                 { bookId: 'b1', name: '문법', startPage: 1, endPage: 10 },
@@ -203,6 +205,91 @@ describe('Daily session page', () => {
     expect(withinLiterature.getByText(/향토문학의 특징으로 옳은 것은/)).toBeInTheDocument();
     expect(withinLiterature.queryByText(/把자문의 어순 규칙을 고르세요/)).not.toBeInTheDocument();
     expect(withinLiterature.queryByText(/被자문의 용법으로 알맞은 것은/)).not.toBeInTheDocument();
+  });
+
+  it('locks a quiz question against resubmission once it has been answered', async () => {
+    render(<Page />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByText('오늘의 학습 시작하기 →'));
+    await user.click(await screen.findByText('A'));
+
+    await waitFor(() => expect(screen.getByText(/설명/)).toBeInTheDocument());
+    expect(screen.getByText('A')).toBeDisabled();
+    expect(screen.getByText('B')).toBeDisabled();
+  });
+
+  it('resumes directly into the session with prior answers restored, skipping the cover screen, when attempts already exist for today', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === '/api/session/today') {
+          return {
+            ok: true,
+            json: async () => ({
+              session: { id: 's1', essay_book_id: 'b1' },
+              questions: [
+                {
+                  id: 'q1',
+                  book_id: 'b1',
+                  type: 'grammar',
+                  prompt: '把자문의 어순은?',
+                  choices: ['A', 'B'],
+                  source_page: 12,
+                },
+                {
+                  id: 'q2',
+                  book_id: 'b1',
+                  type: 'essay',
+                  prompt: '루쉰 문학의 특징을 서술하시오',
+                  choices: null,
+                  source_page: 30,
+                },
+              ],
+              attempts: [
+                {
+                  question_id: 'q1',
+                  user_answer: 'A',
+                  is_correct: false,
+                  explanation: '기존 설명',
+                  korean_draft: null,
+                  chinese_answer: null,
+                  concept_score: null,
+                  concept_checklist: null,
+                  grammar_corrections: null,
+                  created_at: '2026-08-11T00:00:00Z',
+                },
+                {
+                  question_id: 'q2',
+                  user_answer: null,
+                  is_correct: null,
+                  explanation: null,
+                  korean_draft: '기존 초안',
+                  chinese_answer: '鲁迅用现实主义手法...',
+                  concept_score: 3,
+                  concept_checklist: [{ concept: '루쉰의 사실주의 기법', covered: true }],
+                  grammar_corrections: [],
+                  created_at: '2026-08-11T00:01:00Z',
+                },
+              ],
+              vocab: { word_zh: '内卷', pinyin: 'nèijuǎn', meaning_ko: '내권' },
+              bookRanges: [{ bookId: 'b1', name: '문법', startPage: 1, endPage: 10 }],
+            }),
+          } as any;
+        }
+        throw new Error(`unhandled fetch: ${url}`);
+      })
+    );
+
+    render(<Page />);
+
+    expect(await screen.findByText(/설명/)).toBeInTheDocument();
+    expect(screen.queryByText('오늘의 학습 시작하기 →')).not.toBeInTheDocument();
+    expect(screen.getByText('A')).toBeDisabled();
+    expect(screen.getByText('3/4점')).toBeInTheDocument();
+    expect(screen.getByText(/루쉰의 사실주의 기법/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/1단계/)).toHaveValue('기존 초안');
+    expect(screen.getByLabelText(/2단계/)).toHaveValue('鲁迅用现实主义手法...');
   });
 
   it('shows an error message instead of the loading state when the session request fails', async () => {

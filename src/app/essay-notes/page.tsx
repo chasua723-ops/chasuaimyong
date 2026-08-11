@@ -176,6 +176,7 @@ export default function EssayNotesPage() {
           onKoreanChange={setKoreanDraft}
           onChineseChange={setChineseAnswer}
           onSubmit={submitPractice}
+          submitting={grading}
         />
       )}
       {grading && <p className={styles.loading}>채점 중...</p>}
