@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "ingest:book": "tsx scripts/ingest-book-cli.ts",
     "ingest:reference": "tsx scripts/ingest-reference-cli.ts",
+    "ingest:topics": "tsx scripts/ingest-topics-cli.ts",
     "reocr:book": "tsx scripts/reocr-book-cli.ts",
     "reocr:reference": "tsx scripts/reocr-reference-cli.ts"
   },
