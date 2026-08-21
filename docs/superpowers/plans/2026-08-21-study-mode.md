@@ -1737,7 +1737,7 @@ describe('StudyPage', () => {
     await screen.findByText('수사는 명사 앞에 온다');
 
     await user.click(screen.getByText('연습문제 풀기'));
-    await screen.findByText('수사 문제');
+    await screen.findByText(/수사 문제/);
 
     await user.click(screen.getByText('A'));
 
@@ -2081,6 +2081,9 @@ export default function StudyPage() {
       const question = (await res.json()) as PracticeQuestion;
       setPracticeQuestion(question);
       setPracticeFeedback(undefined);
+    } catch (err) {
+      console.error(err);
+      setPracticeError('연습문제를 만들지 못했어요. 다시 시도해주세요.');
     } finally {
       setPracticeLoading(false);
     }
@@ -2094,10 +2097,17 @@ export default function StudyPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionId, userAnswer: answer }),
       });
+      if (!res.ok) {
+        setPracticeError('채점하지 못했어요. 다시 시도해주세요.');
+        return;
+      }
       const result = await res.json();
       setPracticeFeedback(
         result.isCorrect ? 'correct' : { explanation: result.explanation, sourcePage: result.sourcePage }
       );
+    } catch (err) {
+      console.error(err);
+      setPracticeError('채점하지 못했어요. 다시 시도해주세요.');
     } finally {
       setPracticeSubmitting(false);
     }
@@ -2225,6 +2235,12 @@ git commit -m "feat: add /study page for topic-based study and practice"
 ---
 
 ### Task 12: "학습하기" tab on `CoverScreen`
+
+> **SUPERSEDED** — see `docs/superpowers/specs/2026-08-21-nav-card-redesign-design.md`. That
+> design replaces `CoverScreen`'s sideways binder-tab row (including this task's planned fifth
+> tab) with a flat nav card list, and includes 학습하기 as one of those cards from the start. Do
+> not execute this task as written — its entry point is delivered by that spec's own
+> implementation plan instead.
 
 **Files:**
 - Modify: `src/app/components/CoverScreen.tsx`
