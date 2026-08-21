@@ -77,6 +77,16 @@ export interface CategoryStatRow {
   total_count: number;
 }
 
+export interface TopicRow {
+  id: string;
+  book_id: string;
+  parent_id: string | null;
+  name: string;
+  start_page: number;
+  end_page: number;
+  explanation: string | null;
+}
+
 export interface VocabOfTheDay {
   id: string;
   date: string;
