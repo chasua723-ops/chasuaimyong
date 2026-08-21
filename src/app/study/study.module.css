@@ -1,0 +1,139 @@
+/* src/app/study/study.module.css */
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.error {
+  font-size: 12px;
+  color: #d64545;
+  margin: 8px 0;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 8px 0;
+}
+
+.bookRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.bookButton {
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--foreground);
+}
+
+.bookButtonActive {
+  background: var(--study-accent);
+  border-color: var(--study-accent);
+  color: #ffffff;
+}
+
+.topicSection {
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background: var(--card-background);
+  color: var(--foreground);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.contentCard {
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+.contentTitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.contentText {
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin-bottom: 12px;
+}
+
+.explanation {
+  font-size: 13px;
+  line-height: 1.6;
+  background: var(--study-accent-bg);
+  color: var(--study-accent-text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.explainButton {
+  background: var(--study-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.practiceButton {
+  display: block;
+  background: var(--card-background);
+  border: 1px solid var(--study-accent);
+  color: var(--study-accent-text);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 4px;
+}
