@@ -168,6 +168,9 @@ export default function StudyPage() {
       const question = (await res.json()) as PracticeQuestion;
       setPracticeQuestion(question);
       setPracticeFeedback(undefined);
+    } catch (err) {
+      console.error(err);
+      setPracticeError('연습문제를 만들지 못했어요. 다시 시도해주세요.');
     } finally {
       setPracticeLoading(false);
     }
@@ -181,10 +184,17 @@ export default function StudyPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionId, userAnswer: answer }),
       });
+      if (!res.ok) {
+        setPracticeError('채점하지 못했어요. 다시 시도해주세요.');
+        return;
+      }
       const result = await res.json();
       setPracticeFeedback(
         result.isCorrect ? 'correct' : { explanation: result.explanation, sourcePage: result.sourcePage }
       );
+    } catch (err) {
+      console.error(err);
+      setPracticeError('채점하지 못했어요. 다시 시도해주세요.');
     } finally {
       setPracticeSubmitting(false);
     }

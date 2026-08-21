@@ -108,4 +108,66 @@ describe('StudyPage', () => {
 
     expect(await screen.findByText('아직 학습 콘텐츠가 준비되지 않았어요.')).toBeInTheDocument();
   });
+
+  it('shows an error message when generating a practice question fails', async () => {
+    mockFetch({
+      '/api/books': () => ({ ok: true, json: async () => ({ books }) }),
+      '/api/topics?bookId=b1': () => ({ ok: true, json: async () => ({ topics }) }),
+      '/api/study/c1': () => ({
+        ok: true,
+        json: async () => ({
+          topic: { id: 'c1', name: '1절 수사', startPage: 1, endPage: 10 },
+          content: '수사는 명사 앞에 온다',
+          explanation: null,
+        }),
+      }),
+      'POST /api/study/c1/practice': () => ({ ok: false, status: 500, json: async () => ({}) }),
+    });
+    const user = userEvent.setup();
+    render(<StudyPage />);
+
+    await user.click(await screen.findByText('문법'));
+    await user.selectOptions(await screen.findByLabelText('주제 선택'), 'c1');
+    await screen.findByText('수사는 명사 앞에 온다');
+
+    await user.click(screen.getByText('연습문제 풀기'));
+
+    expect(
+      await screen.findByText('연습문제를 만들지 못했어요. 다시 시도해주세요.')
+    ).toBeInTheDocument();
+  });
+
+  it('shows an error message instead of false feedback when grading a practice answer fails', async () => {
+    mockFetch({
+      '/api/books': () => ({ ok: true, json: async () => ({ books }) }),
+      '/api/topics?bookId=b1': () => ({ ok: true, json: async () => ({ topics }) }),
+      '/api/study/c1': () => ({
+        ok: true,
+        json: async () => ({
+          topic: { id: 'c1', name: '1절 수사', startPage: 1, endPage: 10 },
+          content: '수사는 명사 앞에 온다',
+          explanation: null,
+        }),
+      }),
+      'POST /api/study/c1/practice': () => ({
+        ok: true,
+        json: async () => ({ id: 'q1', type: 'grammar', prompt: '수사 문제', choices: ['A', 'B'], sourcePage: 5 }),
+      }),
+      'POST /api/attempts': () => ({ ok: false, status: 500, json: async () => ({}) }),
+    });
+    const user = userEvent.setup();
+    render(<StudyPage />);
+
+    await user.click(await screen.findByText('문법'));
+    await user.selectOptions(await screen.findByLabelText('주제 선택'), 'c1');
+    await screen.findByText('수사는 명사 앞에 온다');
+
+    await user.click(screen.getByText('연습문제 풀기'));
+    await screen.findByText(/수사 문제/);
+
+    await user.click(screen.getByText('A'));
+
+    expect(await screen.findByText('채점하지 못했어요. 다시 시도해주세요.')).toBeInTheDocument();
+    expect(screen.queryByText('정답입니다')).not.toBeInTheDocument();
+  });
 });
