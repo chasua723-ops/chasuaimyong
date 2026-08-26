@@ -42,3 +42,9 @@
   padding: 2px 9px;
   border-radius: 999px;
 }
+
+.noteWrapper {
+  border-left: 4px solid var(--notebook-accent);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}

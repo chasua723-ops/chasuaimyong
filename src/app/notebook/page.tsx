@@ -97,23 +97,24 @@ export default function NotebookPage() {
             </div>
 
             {group.questions.map((q, i) => (
-              <QuizQuestion
-                key={q.id}
-                question={{
-                  id: q.id,
-                  book_id: '',
-                  type: group.type,
-                  prompt: q.prompt,
-                  choices: q.choices,
-                  source_page: q.sourcePage,
-                }}
-                index={i + 1}
-                feedback={feedback[q.id]}
-                onSubmit={submitAnswer}
-                overcome={overcomeOverrides[q.id] ?? q.overcome}
-                attemptCount={overcomeOverrides[q.id] ? q.attemptCount + 1 : q.attemptCount}
-                submitting={submitting[q.id] ?? false}
-              />
+              <div key={q.id} className={styles.noteWrapper}>
+                <QuizQuestion
+                  question={{
+                    id: q.id,
+                    book_id: '',
+                    type: group.type,
+                    prompt: q.prompt,
+                    choices: q.choices,
+                    source_page: q.sourcePage,
+                  }}
+                  index={i + 1}
+                  feedback={feedback[q.id]}
+                  onSubmit={submitAnswer}
+                  overcome={overcomeOverrides[q.id] ?? q.overcome}
+                  attemptCount={overcomeOverrides[q.id] ? q.attemptCount + 1 : q.attemptCount}
+                  submitting={submitting[q.id] ?? false}
+                />
+              </div>
             ))}
           </section>
         );
