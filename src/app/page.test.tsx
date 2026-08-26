@@ -71,7 +71,7 @@ describe('Daily session page', () => {
   it('shows the book section with questions after clicking start', async () => {
     render(<Page />);
 
-    const startButton = await screen.findByText('오늘의 학습 시작하기 →');
+    const startButton = await screen.findByText(/오늘의 학습 시작하기/);
     const user = userEvent.setup();
     await user.click(startButton);
 
@@ -83,7 +83,7 @@ describe('Daily session page', () => {
     render(<Page />);
 
     const user = userEvent.setup();
-    await user.click(await screen.findByText('오늘의 학습 시작하기 →'));
+    await user.click(await screen.findByText(/오늘의 학습 시작하기/));
 
     expect(await screen.findByText('00:00 / 15:00')).toBeInTheDocument();
   });
@@ -92,7 +92,7 @@ describe('Daily session page', () => {
     render(<Page />);
 
     const user = userEvent.setup();
-    await user.click(await screen.findByText('오늘의 학습 시작하기 →'));
+    await user.click(await screen.findByText(/오늘의 학습 시작하기/));
     await user.click(await screen.findByText('A'));
 
     await waitFor(() => expect(screen.getByText(/설명/)).toBeInTheDocument());
@@ -103,7 +103,7 @@ describe('Daily session page', () => {
     render(<Page />);
 
     const user = userEvent.setup();
-    await user.click(await screen.findByText('오늘의 학습 시작하기 →'));
+    await user.click(await screen.findByText(/오늘의 학습 시작하기/));
 
     const koreanBox = await screen.findByLabelText(/1단계/);
     const chineseBox = await screen.findByLabelText(/2단계/);
@@ -118,7 +118,7 @@ describe('Daily session page', () => {
   it('shows the AI-curated vocab of the day labeled as AI content, after starting', async () => {
     render(<Page />);
 
-    await userEvent.setup().click(await screen.findByText('오늘의 학습 시작하기 →'));
+    await userEvent.setup().click(await screen.findByText(/오늘의 학습 시작하기/));
 
     expect(await screen.findByText('内卷')).toBeInTheDocument();
     expect(screen.getByText('AI 큐레이션')).toBeInTheDocument();
@@ -183,7 +183,7 @@ describe('Daily session page', () => {
     render(<Page />);
 
     const user = userEvent.setup();
-    await user.click(await screen.findByText('오늘의 학습 시작하기 →'));
+    await user.click(await screen.findByText(/오늘의 학습 시작하기/));
 
     await screen.findByText(/把자문의 어순 규칙을 고르세요/);
 
@@ -211,7 +211,7 @@ describe('Daily session page', () => {
     render(<Page />);
 
     const user = userEvent.setup();
-    await user.click(await screen.findByText('오늘의 학습 시작하기 →'));
+    await user.click(await screen.findByText(/오늘의 학습 시작하기/));
     await user.click(await screen.findByText('A'));
 
     await waitFor(() => expect(screen.getByText(/설명/)).toBeInTheDocument());
@@ -284,7 +284,7 @@ describe('Daily session page', () => {
     render(<Page />);
 
     expect(await screen.findByText(/설명/)).toBeInTheDocument();
-    expect(screen.queryByText('오늘의 학습 시작하기 →')).not.toBeInTheDocument();
+    expect(screen.queryByText(/오늘의 학습 시작하기/)).not.toBeInTheDocument();
     expect(screen.getByText('A')).toBeDisabled();
     expect(screen.getByText('3/4점')).toBeInTheDocument();
     expect(screen.getByText(/루쉰의 사실주의 기법/)).toBeInTheDocument();
