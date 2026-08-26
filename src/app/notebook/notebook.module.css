@@ -46,5 +46,10 @@
 .noteWrapper {
   border-left: 4px solid var(--notebook-accent);
   border-radius: 10px;
-  margin-bottom: 12px;
+}
+
+.noteWrapper > * {
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }

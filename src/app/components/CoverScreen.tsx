@@ -33,19 +33,19 @@ export default function CoverScreen({ bookRanges, onStart }: CoverScreenProps) {
       </div>
       <nav className={styles.navList}>
         <button className={`${styles.navLink} ${styles.navLinkStart}`} onClick={onStart}>
-          오늘의 학습 시작하기 <span className={styles.navLinkArrow}>›</span>
+          오늘의 학습 시작하기 <span className={styles.navLinkArrow} aria-hidden="true">›</span>
         </button>
         <Link href="/notebook" className={`${styles.navLink} ${styles.navLinkNotebook}`}>
-          오답노트 <span className={styles.navLinkArrow}>›</span>
+          오답노트 <span className={styles.navLinkArrow} aria-hidden="true">›</span>
         </Link>
         <Link href="/essay-notes" className={`${styles.navLink} ${styles.navLinkEssayNotes}`}>
-          서술형 노트 <span className={styles.navLinkArrow}>›</span>
+          서술형 노트 <span className={styles.navLinkArrow} aria-hidden="true">›</span>
         </Link>
         <Link href="/quiz-practice" className={`${styles.navLink} ${styles.navLinkQuizPractice}`}>
-          더 풀기 <span className={styles.navLinkArrow}>›</span>
+          더 풀기 <span className={styles.navLinkArrow} aria-hidden="true">›</span>
         </Link>
         <Link href="/study" className={`${styles.navLink} ${styles.navLinkStudy}`}>
-          학습하기 <span className={styles.navLinkArrow}>›</span>
+          학습하기 <span className={styles.navLinkArrow} aria-hidden="true">›</span>
         </Link>
       </nav>
     </div>
