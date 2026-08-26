@@ -34,8 +34,15 @@ export function computeTopicRanges(chapters: ParsedChapter[], totalPages: number
 
   leaves.sort((a, b) => a.startPage - b.startPage);
 
-  const endPageForLeaf = (leafIndex: number) =>
-    leafIndex === leaves.length - 1 ? totalPages : leaves[leafIndex + 1].startPage - 1;
+  // When two sibling leaves share the same start page (a real TOC page can list more than one
+  // sub-item), the naive "next leaf's start - 1" would go below this leaf's own start page for
+  // the earlier of the pair. Clamp to the leaf's own start so every range stays valid (start <=
+  // end) even in that case, at the cost of the earlier duplicate collapsing to a 1-page span.
+  const endPageForLeaf = (leafIndex: number) => {
+    const leaf = leaves[leafIndex];
+    const rawEnd = leafIndex === leaves.length - 1 ? totalPages : leaves[leafIndex + 1].startPage - 1;
+    return Math.max(rawEnd, leaf.startPage);
+  };
 
   return chapters.map((chapter, chapterIndex) => {
     if (chapter.children.length === 0) {

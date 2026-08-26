@@ -33,6 +33,10 @@ export async function getOrGenerateExplanation(
     .map((p: any) => p.content)
     .join('\n\n');
 
+  if (!content.trim()) {
+    throw new Error(`No book_pages content found for topic ${topicId} in range [${topic.start_page}, ${topic.end_page}]`);
+  }
+
   const explanation = await explainTopic(aiClient, {
     bookName: book.name,
     topicName: topic.name,

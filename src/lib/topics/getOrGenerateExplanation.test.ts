@@ -73,4 +73,16 @@ describe('getOrGenerateExplanation', () => {
       getOrGenerateExplanation(supabase as any, {} as any, 'missing')
     ).rejects.toThrow('Topic not found');
   });
+
+  it('throws instead of asking the AI to explain from no content, when the page range has no book_pages rows', async () => {
+    // Reproduces a real bug: a topic with an inverted/empty page range fetched zero book_pages
+    // rows, and the AI's honest "I have no content to explain from" refusal got cached as if it
+    // were a real explanation. Fail loudly instead of ever calling the AI on empty content.
+    const supabase = createMockSupabase(baseTables({ book_pages: [] }));
+
+    await expect(
+      getOrGenerateExplanation(supabase as any, {} as any, 't1')
+    ).rejects.toThrow('No book_pages content found');
+    expect(vi.mocked(explainTopic)).not.toHaveBeenCalled();
+  });
 });
