@@ -34,6 +34,7 @@ CSS edit, one via a small new wrapper element in `notebook`'s render loop).
 - Modify: `src/app/components/session.module.css:4-109`
 - Modify: `src/app/components/CoverScreen.tsx`
 - Modify: `src/app/components/CoverScreen.test.tsx`
+- Modify: `src/app/page.test.tsx` (8 stale matchers — see Step 6.5 below)
 
 **Interfaces:**
 - Produces: `--study-accent: #2e9e6b`, `--study-accent-bg: #e7f6ef`, `--study-accent-text:
@@ -266,6 +267,43 @@ export default function CoverScreen({ bookRanges, onStart }: CoverScreenProps) {
 Run: `npm test -- CoverScreen`
 Expected: PASS (6 tests)
 
+- [ ] **Step 6.5: Fix the button-text change's fallout in `page.tsx`'s own tests**
+
+`src/app/page.tsx` renders `CoverScreen` directly, and its test file,
+`src/app/page.test.tsx`, queries the old button text as an exact string in 8 places — these will
+fail once `CoverScreen.tsx` is rewritten, since the button's accessible text is now split across a
+plain text node ("오늘의 학습 시작하기 ") and a separate `<span>` ("›"), and the arrow character
+itself changed from "→" to "›". Fix by replacing every occurrence of the exact string
+`'오늘의 학습 시작하기 →'` with the regex `/오늘의 학습 시작하기/` in `src/app/page.test.tsx` —
+this is the same fix pattern already used elsewhere in this codebase for split-text-node matches
+(see `QuizQuestion`'s "Q1. <prompt>" pattern in other test files). There are 8 occurrences, at
+(as of this plan being written) lines 74, 86, 95, 106, 121, 186, 214, and 287 — confirm the exact
+current line numbers yourself with a search before editing, since earlier steps in this task may
+have shifted nothing in `page.test.tsx` (it's untouched until this step) but line numbers should
+still be re-verified rather than assumed. Every occurrence follows one of these two shapes:
+
+```tsx
+await screen.findByText('오늘의 학습 시작하기 →')
+```
+→
+```tsx
+await screen.findByText(/오늘의 학습 시작하기/)
+```
+
+and (one occurrence, a negative assertion):
+
+```tsx
+expect(screen.queryByText('오늘의 학습 시작하기 →')).not.toBeInTheDocument();
+```
+→
+```tsx
+expect(screen.queryByText(/오늘의 학습 시작하기/)).not.toBeInTheDocument();
+```
+
+Run: `npm test -- src/app/page.test.tsx`
+Expected: PASS, same test count as before this task (this is a pure matcher fix, no behavior
+changed in `page.tsx` itself).
+
 - [ ] **Step 7: Type-check**
 
 Run: `npx tsc --noEmit`
@@ -275,7 +313,8 @@ Expected: no new errors.
 
 ```bash
 git add src/app/globals.css src/app/components/session.module.css \
-  src/app/components/CoverScreen.tsx src/app/components/CoverScreen.test.tsx
+  src/app/components/CoverScreen.tsx src/app/components/CoverScreen.test.tsx \
+  src/app/page.test.tsx
 git commit -m "feat: replace cover screen's binder tabs with a flat nav card list"
 ```
 
