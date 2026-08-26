@@ -2,7 +2,6 @@
 
 /* 표지 */
 .cover {
-  position: relative;
   min-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -45,67 +44,57 @@
   margin-bottom: 0;
 }
 
-.startButton {
-  background: var(--accent);
-  color: var(--accent-foreground);
-  border: none;
-  border-radius: 10px;
-  padding: 12px 32px;
-  font-size: 14px;
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: var(--card-background);
+  border: 1px solid var(--card-border);
+  font-size: 15px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
+  color: var(--foreground);
+  transition: transform 0.1s ease;
 }
 
-.tabStack {
-  position: absolute;
-  right: -20px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
+.navLink:active {
+  transform: scale(0.98);
 }
 
-.notebookTab {
-  display: block;
-  box-sizing: content-box;
-  background: var(--notebook-accent);
-  color: #ffffff;
-  border-radius: 0 8px 0 0;
-  padding: 14px 6px;
-  font-size: 12px;
-  font-weight: 600;
-  writing-mode: vertical-rl;
-  letter-spacing: 2px;
-  white-space: nowrap;
+.navLinkStart {
+  border-left: 4px solid var(--accent);
 }
 
-.essayNotesTab {
-  display: block;
-  box-sizing: content-box;
-  background: var(--essay-notes-accent);
-  color: #ffffff;
-  border-radius: 0;
-  padding: 14px 6px;
-  font-size: 12px;
-  font-weight: 600;
-  writing-mode: vertical-rl;
-  letter-spacing: 2px;
-  white-space: nowrap;
+.navLinkNotebook {
+  border-left: 4px solid var(--notebook-accent);
 }
 
-.quizPracticeTab {
-  display: block;
-  box-sizing: content-box;
-  background: var(--quiz-practice-accent);
-  color: #ffffff;
-  border-radius: 0 0 8px 0;
-  padding: 14px 6px;
-  font-size: 12px;
-  font-weight: 600;
-  writing-mode: vertical-rl;
-  letter-spacing: 2px;
-  white-space: nowrap;
+.navLinkEssayNotes {
+  border-left: 4px solid var(--essay-notes-accent);
+}
+
+.navLinkQuizPractice {
+  border-left: 4px solid var(--quiz-practice-accent);
+}
+
+.navLinkStudy {
+  border-left: 4px solid var(--study-accent);
+}
+
+.navLinkArrow {
+  color: var(--text-secondary);
+  font-size: 18px;
 }
 
 /* 교재 섹션 */

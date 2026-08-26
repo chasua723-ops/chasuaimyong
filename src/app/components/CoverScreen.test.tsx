@@ -18,34 +18,41 @@ describe('CoverScreen', () => {
     expect(screen.getByText(/문학개론 · 8~14p/)).toBeInTheDocument();
   });
 
-  it('calls onStart when the start button is clicked', async () => {
+  it('calls onStart when the start nav card is clicked', async () => {
     const onStart = vi.fn();
     render(<CoverScreen bookRanges={bookRanges} onStart={onStart} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByText('오늘의 학습 시작하기 →'));
+    await user.click(screen.getByText(/오늘의 학습 시작하기/));
 
     expect(onStart).toHaveBeenCalled();
   });
 
-  it('links to the wrong-answer notebook via the binder tab', () => {
+  it('links to the wrong-answer notebook via a nav card', () => {
     render(<CoverScreen bookRanges={bookRanges} onStart={vi.fn()} />);
 
-    const link = screen.getByText('오답노트').closest('a');
+    const link = screen.getByText(/오답노트/).closest('a');
     expect(link).toHaveAttribute('href', '/notebook');
   });
 
-  it('links to the essay notebook via a second binder tab', () => {
+  it('links to the essay notebook via a nav card', () => {
     render(<CoverScreen bookRanges={bookRanges} onStart={vi.fn()} />);
 
-    const link = screen.getByText('서술형 노트').closest('a');
+    const link = screen.getByText(/서술형 노트/).closest('a');
     expect(link).toHaveAttribute('href', '/essay-notes');
   });
 
-  it('links to the quiz practice record via a third binder tab', () => {
+  it('links to the quiz practice record via a nav card', () => {
     render(<CoverScreen bookRanges={bookRanges} onStart={vi.fn()} />);
 
-    const link = screen.getByText('더 풀기').closest('a');
+    const link = screen.getByText(/더 풀기/).closest('a');
     expect(link).toHaveAttribute('href', '/quiz-practice');
+  });
+
+  it('links to study mode via a nav card', () => {
+    render(<CoverScreen bookRanges={bookRanges} onStart={vi.fn()} />);
+
+    const link = screen.getByText(/학습하기/).closest('a');
+    expect(link).toHaveAttribute('href', '/study');
   });
 });

@@ -31,20 +31,23 @@ export default function CoverScreen({ bookRanges, onStart }: CoverScreenProps) {
           </div>
         ))}
       </div>
-      <button className={styles.startButton} onClick={onStart}>
-        오늘의 학습 시작하기 →
-      </button>
-      <div className={styles.tabStack}>
-        <Link href="/notebook" className={styles.notebookTab}>
-          오답노트
+      <nav className={styles.navList}>
+        <button className={`${styles.navLink} ${styles.navLinkStart}`} onClick={onStart}>
+          오늘의 학습 시작하기 <span className={styles.navLinkArrow}>›</span>
+        </button>
+        <Link href="/notebook" className={`${styles.navLink} ${styles.navLinkNotebook}`}>
+          오답노트 <span className={styles.navLinkArrow}>›</span>
         </Link>
-        <Link href="/essay-notes" className={styles.essayNotesTab}>
-          서술형 노트
+        <Link href="/essay-notes" className={`${styles.navLink} ${styles.navLinkEssayNotes}`}>
+          서술형 노트 <span className={styles.navLinkArrow}>›</span>
         </Link>
-        <Link href="/quiz-practice" className={styles.quizPracticeTab}>
-          더 풀기
+        <Link href="/quiz-practice" className={`${styles.navLink} ${styles.navLinkQuizPractice}`}>
+          더 풀기 <span className={styles.navLinkArrow}>›</span>
         </Link>
-      </div>
+        <Link href="/study" className={`${styles.navLink} ${styles.navLinkStudy}`}>
+          학습하기 <span className={styles.navLinkArrow}>›</span>
+        </Link>
+      </nav>
     </div>
   );
 }
