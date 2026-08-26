@@ -242,7 +242,11 @@ export default function StudyPage() {
               {groups.map((group) => (
                 <optgroup key={group.parent.id} label={group.parent.name}>
                   {group.children.map((child) => (
-                    <option key={child.id} value={child.id}>
+                    <option
+                      key={child.id}
+                      value={child.id}
+                      className={containsChinese(child.name) ? 'zh' : undefined}
+                    >
                       {child.name}
                     </option>
                   ))}
@@ -258,7 +262,9 @@ export default function StudyPage() {
 
       {detail && (
         <div className={styles.contentCard}>
-          <p className={styles.contentTitle}>{detail.topic.name}</p>
+          <p className={`${styles.contentTitle}${containsChinese(detail.topic.name) ? ' zh' : ''}`}>
+            {detail.topic.name}
+          </p>
           <p className={`${styles.contentText}${containsChinese(detail.content) ? ' zh' : ''}`}>
             {detail.content}
           </p>
