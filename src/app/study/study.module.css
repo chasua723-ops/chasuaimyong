@@ -83,6 +83,7 @@
 .contentCard {
   background: var(--card-background);
   border: 1px solid var(--card-border);
+  border-left: 4px solid var(--study-accent);
   border-radius: 10px;
   padding: 14px;
   margin-top: 12px;
