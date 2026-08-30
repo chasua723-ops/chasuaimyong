@@ -325,7 +325,7 @@ git commit -m "feat: add answerSearchQuery for grounded AI answers from search e
 
 ```ts
 // src/lib/search/runSearch.test.ts
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runSearch } from './runSearch';
 import { searchBookPages } from './searchBookPages';
 import { answerSearchQuery } from '../ai/answerSearchQuery';
@@ -334,6 +334,11 @@ vi.mock('./searchBookPages', () => ({ searchBookPages: vi.fn() }));
 vi.mock('../ai/answerSearchQuery', () => ({ answerSearchQuery: vi.fn() }));
 
 describe('runSearch', () => {
+  beforeEach(() => {
+    vi.mocked(searchBookPages).mockClear();
+    vi.mocked(answerSearchQuery).mockClear();
+  });
+
   it('searches, then answers using the matches, and returns both', async () => {
     vi.mocked(searchBookPages).mockResolvedValue([
       { bookId: 'b1', bookName: '문법', pageNum: 10, content: '把자문 내용' },
