@@ -66,9 +66,12 @@ New page `src/app/search/page.tsx`:
 2. On submit: `POST /api/search` with `{ query }`, no history (first turn).
 3. Empty state: "검색 결과가 없어요." when `matches.length === 0`.
 4. Result state: an AI-answer card (accent-colored left border, same visual language as 학습하기's
-   해설 card) showing `answer`, followed by the raw excerpts — grouped under each book's name,
-   each excerpt showing its page number and content (Chinese excerpts get the existing
-   `containsChinese` → `zh` font-class treatment already used throughout the app).
+   해설 card) showing `answer`, followed by the raw excerpts as a flat list — no per-book heading;
+   each excerpt carries its own `{bookName} · {pageNum}페이지` label inline, which the sorted
+   (book-then-page) match order already keeps grouped in practice. (Implemented this way; the
+   original draft of this spec said "grouped under each book's name" as a heading, which turned
+   out to be unnecessary once each item already states its own book.) Chinese excerpts get the
+   existing `containsChinese` → `zh` font-class treatment already used throughout the app.
 5. Below the results, a follow-up input box. Submitting it calls `POST /api/search` again with
    the new query and the accumulated `history` (every prior `{question, answer}` pair in this
    thread, oldest first). The new turn's question and answer are appended and rendered as a
@@ -89,9 +92,11 @@ existing five cards. No other change to the nav-card redesign's markup/CSS struc
 ## Error handling
 
 Same pattern as every other page in this app: fetch failure → Korean error message +
-`console.error`, no silent failure. No `maxDuration` override needed beyond the Next.js default,
-since a single `askClaude` call with 10 short excerpts is well within normal response time (same
-order of magnitude as `explainTopic`, which has no override either).
+`console.error`, no silent failure. The route sets `maxDuration = 60` (this spec's original draft
+said no override was needed, but the implementation plan added one to match every other
+AI-calling route in this app, e.g. `/api/study/[topicId]/explain` — kept as the safer choice for a
+2000-token answer). The route also rejects an empty/whitespace `query` with a 400 before doing any
+DB or AI work.
 
 ## Testing
 
