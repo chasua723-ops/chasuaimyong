@@ -55,4 +55,11 @@ describe('CoverScreen', () => {
     const link = screen.getByText(/학습하기/).closest('a');
     expect(link).toHaveAttribute('href', '/study');
   });
+
+  it('links to search via a nav card', () => {
+    render(<CoverScreen bookRanges={bookRanges} onStart={vi.fn()} />);
+
+    const link = screen.getByText(/검색/).closest('a');
+    expect(link).toHaveAttribute('href', '/search');
+  });
 });

@@ -47,6 +47,9 @@ export default function CoverScreen({ bookRanges, onStart }: CoverScreenProps) {
         <Link href="/study" className={`${styles.navLink} ${styles.navLinkStudy}`}>
           학습하기 <span className={styles.navLinkArrow} aria-hidden="true">›</span>
         </Link>
+        <Link href="/search" className={`${styles.navLink} ${styles.navLinkSearch}`}>
+          검색 <span className={styles.navLinkArrow} aria-hidden="true">›</span>
+        </Link>
       </nav>
     </div>
   );

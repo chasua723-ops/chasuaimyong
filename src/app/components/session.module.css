@@ -92,6 +92,10 @@
   border-left: 4px solid var(--study-accent);
 }
 
+.navLinkSearch {
+  border-left: 4px solid var(--search-accent);
+}
+
 .navLinkArrow {
   color: var(--text-secondary);
   font-size: 18px;

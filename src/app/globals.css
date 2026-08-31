@@ -23,6 +23,9 @@
   --study-accent: #2e9e6b;
   --study-accent-bg: #e7f6ef;
   --study-accent-text: #1c6b48;
+  --search-accent: #cc5b47;
+  --search-accent-bg: #fbeae6;
+  --search-accent-text: #96402f;
   --timer-over-color: #c0392b;
   --highlight-color: #2563eb;
 }
