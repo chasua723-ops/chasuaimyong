@@ -73,4 +73,22 @@ describe('runSearch', () => {
     const call = vi.mocked(answerSearchQuery).mock.calls[0][1];
     expect(call.history).toEqual([{ question: '이전질문', answer: '이전답변' }]);
   });
+
+  it('caps history at the most recent 5 turns, even when more are passed in', async () => {
+    vi.mocked(searchBookPages).mockResolvedValue([
+      { bookId: 'b1', bookName: '문법', pageNum: 5, content: '내용' },
+    ]);
+    vi.mocked(answerSearchQuery).mockResolvedValue('답변');
+
+    const manyTurns = Array.from({ length: 8 }, (_, i) => ({
+      question: `질문${i + 1}`,
+      answer: `답변${i + 1}`,
+    }));
+
+    await runSearch({} as any, {} as any, { query: '검색어', history: manyTurns });
+
+    const call = vi.mocked(answerSearchQuery).mock.calls[0][1];
+    expect(call.history).toEqual(manyTurns.slice(-5));
+    expect(call.history).toHaveLength(5);
+  });
 });

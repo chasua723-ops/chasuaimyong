@@ -9,10 +9,17 @@ export interface SearchMatch {
 
 const MAX_MATCHES = 30;
 
+function escapeLikePattern(value: string): string {
+  return value.replace(/[%_\\]/g, '\\$&');
+}
+
 export async function searchBookPages(supabase: SupabaseClient, query: string): Promise<SearchMatch[]> {
   const { data: pages, error: pagesError } = await (supabase.from('book_pages') as any)
     .select('book_id, page_num, content')
-    .ilike('content', `%${query}%`);
+    .ilike('content', `%${escapeLikePattern(query)}%`)
+    .order('book_id', { ascending: true })
+    .order('page_num', { ascending: true })
+    .limit(MAX_MATCHES);
   if (pagesError) throw new Error(`Failed to search book pages: ${pagesError.message}`);
 
   const { data: books, error: booksError } = await (supabase.from('books') as any).select('id, name');

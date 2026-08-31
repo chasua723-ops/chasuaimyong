@@ -10,6 +10,9 @@ export async function POST(req: NextRequest) {
     query: string;
     history?: { question: string; answer: string }[];
   };
+  if (!body.query?.trim()) {
+    return NextResponse.json({ error: 'query is required' }, { status: 400 });
+  }
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
   try {

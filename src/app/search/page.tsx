@@ -50,6 +50,7 @@ export default function SearchPage() {
   }
 
   async function handleSearch() {
+    if (loading) return;
     const query = queryInput.trim();
     if (!query) return;
     const result = await runQuery(query, []);
@@ -59,9 +60,10 @@ export default function SearchPage() {
   }
 
   async function handleFollowup() {
+    if (loading) return;
     const query = followupInput.trim();
     if (!query) return;
-    const history = turns.map((t) => ({ question: t.question, answer: t.answer }));
+    const history = turns.filter((t) => t.answer).map((t) => ({ question: t.question, answer: t.answer }));
     const result = await runQuery(query, history);
     if (!result) return;
     setTurns((prev) => [...prev, { question: query, answer: result.answer, matches: result.matches }]);

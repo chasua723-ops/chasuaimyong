@@ -4,6 +4,7 @@ import { searchBookPages, type SearchMatch } from './searchBookPages';
 import { answerSearchQuery, type SearchHistoryTurn } from '../ai/answerSearchQuery';
 
 const MAX_EXCERPTS_FOR_AI = 10;
+const MAX_HISTORY_TURNS = 5;
 
 export interface RunSearchInput {
   query: string;
@@ -32,7 +33,7 @@ export async function runSearch(
       pageNum: m.pageNum,
       content: m.content,
     })),
-    history: input.history,
+    history: input.history?.slice(-MAX_HISTORY_TURNS),
   });
 
   return { answer, matches };

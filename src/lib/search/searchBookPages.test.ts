@@ -49,4 +49,20 @@ describe('searchBookPages', () => {
 
     expect(result).toHaveLength(30);
   });
+
+  it('treats a literal % in the query as a literal character, not a wildcard', async () => {
+    // Without escaping, the '%' in the query would act as a SQL wildcard matching zero or
+    // more characters, so '가%나' would spuriously match content like '가나다라' (which merely
+    // has '가' immediately followed by '나', satisfying the wildcard with zero characters in
+    // between) even though it never contains the literal text the user searched for.
+    const supabase = createMockSupabase(
+      baseTables({
+        book_pages: [{ book_id: 'b1', page_num: 1, content: '가나다라' }],
+      })
+    );
+
+    const result = await searchBookPages(supabase as any, '가%나');
+
+    expect(result).toEqual([]);
+  });
 });

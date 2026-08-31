@@ -1,6 +1,6 @@
 // src/app/search/page.test.tsx
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SearchPage from './page';
 
@@ -96,6 +96,32 @@ describe('SearchPage', () => {
 
     expect(await screen.findByText('겸어문 후속 답변')).toBeInTheDocument();
     expect(screen.getByText('把자문 답변')).toBeInTheDocument();
+  });
+
+  it('excludes a turn with no matches from the history sent on a follow-up', async () => {
+    mockFetch({
+      'POST /api/search': [
+        () => ({ ok: true, json: async () => ({ answer: '', matches: [] }) }),
+        () => ({ ok: true, json: async () => ({ answer: '', matches: [] }) }),
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<SearchPage />);
+
+    await user.type(screen.getByPlaceholderText('검색어를 입력하세요'), '존재하지않는단어');
+    await user.click(screen.getByRole('button', { name: '검색' }));
+    await screen.findByText('검색 결과가 없어요.');
+
+    await user.type(screen.getByPlaceholderText('추가로 궁금한 걸 물어보세요'), '후속질문');
+    await user.click(screen.getByRole('button', { name: '질문' }));
+
+    await waitFor(() => expect(screen.getAllByText('검색 결과가 없어요.')).toHaveLength(2));
+
+    const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls).toHaveLength(2);
+    const secondCallBody = JSON.parse(calls[1][1].body);
+    expect(secondCallBody.history).toBeUndefined();
   });
 
   it('shows an error message when the search request fails', async () => {
